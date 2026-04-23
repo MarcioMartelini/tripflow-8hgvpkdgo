@@ -29,6 +29,7 @@ import {
   Calendar,
   Banknote,
   Map,
+  FileText,
 } from 'lucide-react'
 
 export default function TripDetails() {
@@ -153,11 +154,18 @@ export default function TripDetails() {
                 <span className="font-medium">{formatCurrency(trip.budget_total, trip.moeda)}</span>
               </div>
             </div>
-            <Button className="w-full" asChild>
-              <Link to={`/trips/${trip.id}/itinerary`}>
-                <Map className="mr-2 h-4 w-4" /> Ver Itinerário Completo
-              </Link>
-            </Button>
+            <div className="grid grid-cols-2 gap-2 w-full">
+              <Button variant="outline" className="w-full" asChild>
+                <Link to={`/trips/${trip.id}/documents`}>
+                  <FileText className="mr-2 h-4 w-4" /> Documentos
+                </Link>
+              </Button>
+              <Button className="w-full" asChild>
+                <Link to={`/trips/${trip.id}/itinerary`}>
+                  <Map className="mr-2 h-4 w-4" /> Itinerário
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
