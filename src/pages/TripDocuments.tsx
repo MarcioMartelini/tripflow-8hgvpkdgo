@@ -51,7 +51,7 @@ import {
   Eye,
   Download,
   UploadCloud,
-  File,
+  File as FileIcon,
   Book,
   Shield,
   Receipt,
@@ -72,33 +72,41 @@ const getTypeIcon = (tipo: string) => {
     case 'comprovante':
       return <Receipt className="h-5 w-5 text-orange-500" />
     default:
-      return <File className="h-5 w-5 text-slate-500" />
+      return <FileIcon className="h-5 w-5 text-slate-500" />
   }
 }
 
 const getExpirationStatus = (dateStr?: string) => {
-  if (!dateStr)
+  if (!dateStr) {
     return {
       label: 'Válido',
       color: 'bg-green-100 text-green-800 border-green-200',
       icon: CheckCircle2,
     }
+  }
   const expDate = parseISO(dateStr)
-  if (!isValid(expDate))
+  if (!isValid(expDate)) {
     return {
       label: 'Válido',
       color: 'bg-green-100 text-green-800 border-green-200',
       icon: CheckCircle2,
     }
+  }
   const daysDiff = differenceInDays(expDate, new Date())
-  if (daysDiff < 0)
-    return { label: 'Expirado', color: 'bg-red-100 text-red-800 border-red-200', icon: AlertCircle }
-  if (daysDiff <= 30)
+  if (daysDiff < 0) {
     return {
-      label: `Expira em ${daysDiff} dias`,
+      label: 'Documento expirado',
+      color: 'bg-red-100 text-red-800 border-red-200',
+      icon: AlertCircle,
+    }
+  }
+  if (daysDiff <= 30) {
+    return {
+      label: `Documento expira em ${daysDiff} dias`,
       color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       icon: Clock,
     }
+  }
   return {
     label: 'Válido',
     color: 'bg-green-100 text-green-800 border-green-200',
@@ -121,8 +129,10 @@ export default function TripDocuments() {
 
   const [openUpload, setOpenUpload] = useState(false)
   const [file, setFile] = useState<File | null>(null)
+  const [fileError, setFileError] = useState('')
   const [tipo, setTipo] = useState('')
   const [dataExp, setDataExp] = useState('')
+  const [dateError, setDateError] = useState('')
   const [notas, setNotas] = useState('')
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -146,18 +156,51 @@ export default function TripDocuments() {
   useEffect(() => {
     loadData()
   }, [id])
+
   useRealtime('documentos', () => {
     if (id) loadData()
   })
 
+  const handleFileChange = (f: File | undefined) => {
+    if (!f) {
+      setFile(null)
+      setFileError('')
+      return
+    }
+    if (f.type !== 'application/pdf') {
+      setFileError('Apenas arquivos PDF são permitidos.')
+      setFile(null)
+      return
+    }
+    if (f.size > 5242880) {
+      setFileError('O arquivo excede o limite de 5MB.')
+      setFile(null)
+      return
+    }
+    setFileError('')
+    setFile(f)
+  }
+
+  const handleDateChange = (val: string) => {
+    setDataExp(val)
+    if (!val) {
+      setDateError('')
+      return
+    }
+    const selected = parseISO(val)
+    selected.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (selected < today) {
+      setDateError('A data de expiração deve ser no futuro.')
+    } else {
+      setDateError('')
+    }
+  }
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !tipo)
-      return toast({ title: 'Preencha o tipo e selecione um arquivo', variant: 'destructive' })
-    if (file.size > 5242880)
-      return toast({ title: 'O arquivo excede o limite de 5MB.', variant: 'destructive' })
-    if (file.type !== 'application/pdf')
-      return toast({ title: 'Apenas arquivos PDF são permitidos.', variant: 'destructive' })
+    if (!file || !tipo || fileError || dateError) return
 
     setUploading(true)
     setUploadProgress(30)
@@ -188,13 +231,15 @@ export default function TripDocuments() {
   }
 
   const filteredDocs = docs.filter((d) => filter === 'todos' || d.tipo === filter)
+  const isSubmitDisabled = !file || !tipo || !!fileError || !!dateError || uploading
 
   if (error) {
     return (
-      <div className="container py-12 text-center animate-fade-in">
-        <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Ocorreu um erro ao carregar os documentos</h2>
-        <Button onClick={loadData}>Tentar novamente</Button>
+      <div className="container py-16 text-center animate-fade-in flex flex-col items-center justify-center">
+        <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
+        <h2 className="text-2xl font-bold mb-2 text-slate-900">Erro ao carregar documentos</h2>
+        <p className="text-slate-500 mb-6">Tente novamente em alguns instantes</p>
+        <Button onClick={loadData}>Tentar Novamente</Button>
       </div>
     )
   }
@@ -205,8 +250,8 @@ export default function TripDocuments() {
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-20 w-full" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-40 w-full" />
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-[200px] w-full" />
           ))}
         </div>
       </div>
@@ -254,16 +299,14 @@ export default function TripDocuments() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Arquivo *</Label>
+                <Label>Arquivo PDF *</Label>
                 <div
-                  className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-slate-50 cursor-pointer transition-colors"
+                  className={`border-2 border-dashed rounded-lg p-6 text-center hover:bg-slate-50 cursor-pointer transition-colors ${fileError ? 'border-red-300' : 'border-slate-200'}`}
                   onClick={() => fileInputRef.current?.click()}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault()
-                    const f = e.dataTransfer.files?.[0]
-                    if (f && f.type === 'application/pdf') setFile(f)
-                    else toast({ title: 'Apenas PDF é permitido', variant: 'destructive' })
+                    handleFileChange(e.dataTransfer.files?.[0])
                   }}
                 >
                   <input
@@ -271,13 +314,13 @@ export default function TripDocuments() {
                     accept="application/pdf"
                     className="hidden"
                     ref={fileInputRef}
-                    onChange={(e) => {
-                      if (e.target.files?.[0]) setFile(e.target.files[0])
-                    }}
+                    onChange={(e) => handleFileChange(e.target.files?.[0])}
                   />
-                  <UploadCloud className="mx-auto h-8 w-8 text-slate-400 mb-2" />
+                  <UploadCloud
+                    className={`mx-auto h-8 w-8 mb-2 ${fileError ? 'text-red-400' : 'text-slate-400'}`}
+                  />
                   {file ? (
-                    <p className="text-sm font-medium text-primary">{file.name}</p>
+                    <p className="text-sm font-medium text-primary truncate px-4">{file.name}</p>
                   ) : (
                     <p className="text-sm text-slate-500">
                       Arraste o PDF aqui ou clique para selecionar
@@ -286,87 +329,100 @@ export default function TripDocuments() {
                     </p>
                   )}
                 </div>
+                {fileError && <p className="text-sm text-red-500">{fileError}</p>}
               </div>
               <div className="space-y-2">
                 <Label>Data de expiração</Label>
-                <Input type="date" value={dataExp} onChange={(e) => setDataExp(e.target.value)} />
+                <Input
+                  type="date"
+                  value={dataExp}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                />
+                {dateError && <p className="text-sm text-red-500">{dateError}</p>}
               </div>
               <div className="space-y-2">
                 <Label>Notas</Label>
                 <Textarea
                   value={notas}
+                  maxLength={500}
                   onChange={(e) => setNotas(e.target.value)}
-                  placeholder="Observações adicionais..."
+                  placeholder="Adicione observações sobre este documento"
                 />
               </div>
               {uploading && <Progress value={uploadProgress} className="h-2" />}
-              <Button type="submit" className="w-full" disabled={uploading}>
-                {uploading ? 'Enviando...' : 'Salvar Documento'}
+              <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
+                {uploading ? 'Enviando...' : 'Adicionar'}
               </Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {['todos', 'passaporte', 'visto', 'seguro', 'comprovante', 'outro'].map((f) => (
-          <Badge
-            key={f}
-            variant={filter === f ? 'default' : 'secondary'}
-            className="capitalize cursor-pointer px-3 py-1 text-sm font-medium"
-            onClick={() => setFilter(f)}
-          >
-            {f}
-          </Badge>
-        ))}
+      <div className="mb-4">
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-full sm:w-[250px]">
+            <SelectValue placeholder="Filtrar por tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="passaporte">Passaporte</SelectItem>
+            <SelectItem value="visto">Visto</SelectItem>
+            <SelectItem value="seguro">Seguro</SelectItem>
+            <SelectItem value="comprovante">Comprovante</SelectItem>
+            <SelectItem value="outro">Outro</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {filteredDocs.length === 0 ? (
-        <div className="text-center py-16 bg-slate-50 rounded-lg border-2 border-dashed">
-          <FileText className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-          <h3 className="text-lg font-medium text-slate-900">Nenhum documento adicionado</h3>
-          <p className="text-slate-500 mt-1 mb-4 text-sm">
-            Adicione passaportes, vistos e vouchers para acesso rápido.
-          </p>
-          <Button onClick={() => setOpenUpload(true)} variant="outline">
-            Adicionar Documento
+        <div className="text-center py-16 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+          <FileText className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+          <h3 className="text-xl font-semibold text-slate-900">Nenhum documento adicionado</h3>
+          <p className="text-slate-500 mt-2 mb-6">Comece adicionando seus documentos de viagem</p>
+          <Button onClick={() => setOpenUpload(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Adicionar Documento
           </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredDocs.map((doc) => {
             const exp = getExpirationStatus(doc.data_expiracao)
+            const formattedDate =
+              doc.data_expiracao && isValid(parseISO(doc.data_expiracao))
+                ? format(parseISO(doc.data_expiracao), 'dd/MM/yyyy')
+                : null
+
             return (
               <Card key={doc.id} className="animate-fade-in hover:shadow-md transition-shadow">
-                <CardContent className="p-4 flex flex-col h-full">
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="p-2 bg-slate-100 rounded-lg shrink-0">
+                <CardContent className="p-5 flex flex-col h-full">
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="p-3 bg-slate-100 rounded-lg shrink-0">
                       {getTypeIcon(doc.tipo)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3
-                        className="font-medium text-sm truncate text-slate-900"
-                        title={doc.nome_arquivo}
-                      >
+                      <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">
+                        {doc.tipo}
+                      </p>
+                      <h3 className="font-medium text-slate-900 truncate" title={doc.nome_arquivo}>
                         {doc.nome_arquivo}
                       </h3>
-                      <p className="text-xs text-slate-500 capitalize">{doc.tipo}</p>
+                      {formattedDate && (
+                        <p className="text-xs text-slate-500 mt-1">Expira em: {formattedDate}</p>
+                      )}
                     </div>
                   </div>
-                  <div className="mt-auto pt-3 border-t flex flex-col gap-3">
-                    {doc.data_expiracao && (
-                      <Badge variant="outline" className={`w-fit flex gap-1 ${exp.color}`}>
-                        <exp.icon className="h-3 w-3" /> {exp.label}
-                      </Badge>
-                    )}
-                    <div className="flex justify-end gap-2 mt-2">
+                  <div className="mt-auto pt-4 border-t flex flex-col gap-4">
+                    <Badge variant="outline" className={`w-fit flex gap-1.5 ${exp.color}`}>
+                      <exp.icon className="h-3.5 w-3.5" /> {exp.label}
+                    </Badge>
+                    <div className="flex justify-end gap-2">
                       <Button variant="secondary" size="sm" onClick={() => setViewDoc(doc)}>
-                        <Eye className="h-4 w-4 mr-1" /> Visualizar
+                        <Eye className="h-4 w-4 mr-2" /> Visualizar
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
                         onClick={() => setDeleteDoc(doc)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -382,30 +438,36 @@ export default function TripDocuments() {
 
       {/* Viewer Modal */}
       <Dialog open={!!viewDoc} onOpenChange={(o) => !o && setViewDoc(null)}>
-        <DialogContent className="max-w-4xl h-[85vh] flex flex-col">
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>{viewDoc?.nome_arquivo}</DialogTitle>
+            <DialogTitle className="truncate pr-8">{viewDoc?.nome_arquivo}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 bg-slate-100 rounded-md overflow-hidden relative">
             {viewDoc && (
-              <iframe
-                src={getDocumentUrl(viewDoc)}
+              <object
+                data={getDocumentUrl(viewDoc)}
+                type="application/pdf"
                 className="w-full h-full border-0"
-                title={viewDoc.nome_arquivo}
-              />
+              >
+                <div className="flex flex-col items-center justify-center h-full text-slate-500 p-8 text-center bg-slate-50">
+                  <AlertCircle className="h-12 w-12 mb-4 text-slate-400" />
+                  <p className="font-medium text-slate-700">Não foi possível visualizar o PDF.</p>
+                  <p className="text-sm mt-2">Faça o download para acessar o arquivo localmente.</p>
+                </div>
+              </object>
             )}
           </div>
-          <DialogFooter className="mt-2">
+          <DialogFooter className="mt-4 gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setViewDoc(null)}>
+              Fechar
+            </Button>
             {viewDoc && (
-              <Button asChild variant="default">
+              <Button asChild>
                 <a href={getDocumentUrl(viewDoc)} download target="_blank" rel="noreferrer">
                   <Download className="mr-2 h-4 w-4" /> Download
                 </a>
               </Button>
             )}
-            <Button variant="outline" onClick={() => setViewDoc(null)}>
-              Fechar
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -414,15 +476,19 @@ export default function TripDocuments() {
       <AlertDialog open={!!deleteDoc} onOpenChange={(o) => !o && setDeleteDoc(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Deletar documento</AlertDialogTitle>
+            <AlertDialogTitle>Deletar Documento</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja deletar este documento? Esta ação não pode ser desfeita.
+              Tem certeza que deseja deletar este documento?
+              <br />
+              <span className="font-semibold text-red-600 block mt-2">
+                Esta ação não pode ser desfeita.
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
               onClick={async () => {
                 if (deleteDoc) {
                   try {
