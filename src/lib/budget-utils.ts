@@ -8,6 +8,17 @@ export const EXCHANGE_RATES: Record<string, number> = {
   AUD: 3.4,
 }
 
+export const CATEGORIAS = [
+  'hospedagem',
+  'transporte',
+  'alimentação',
+  'atividades',
+  'compras',
+  'outro',
+]
+
+export const MOEDAS = ['BRL', 'USD', 'EUR', 'GBP', 'AUD']
+
 export const convertCurrency = (value: number, from: string, to: string) => {
   const fromRate = EXCHANGE_RATES[from.toUpperCase()] || 1
   const toRate = EXCHANGE_RATES[to.toUpperCase()] || 1
@@ -32,9 +43,7 @@ export const calculateBudgetData = (
   despesas: Despesa[],
   targetCurrency: string = 'BRL',
 ): BudgetData[] => {
-  const categories = ['hospedagem', 'transporte', 'alimentação', 'atividades', 'compras', 'outro']
-
-  return categories.map((cat) => {
+  return CATEGORIAS.map((cat) => {
     const plannedForCat = orcamentos
       .filter((o) => o.categoria === cat)
       .reduce(
