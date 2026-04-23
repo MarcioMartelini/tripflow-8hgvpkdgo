@@ -14,6 +14,12 @@ export interface Documento {
   updated: string
   collectionId: string
   collectionName: string
+  expand?: {
+    viagem_id?: {
+      id: string
+      title: string
+    }
+  }
 }
 
 export const getDocumentosCount = async () => {
@@ -26,6 +32,17 @@ export const getDocumentosCount = async () => {
   return res.totalItems
 }
 
+export const getAllDocuments = async (): Promise<Documento[]> => {
+  const userId = pb.authStore.record?.id
+  if (!userId) throw new Error('User not authenticated')
+
+  return pb.collection('documentos').getFullList<Documento>({
+    filter: `usuario_id = "${userId}"`,
+    sort: '-created',
+    expand: 'viagem_id',
+  })
+}
+
 export const getTripDocuments = async (tripId: string): Promise<Documento[]> => {
   const userId = pb.authStore.record?.id
   if (!userId) throw new Error('User not authenticated')
@@ -33,6 +50,7 @@ export const getTripDocuments = async (tripId: string): Promise<Documento[]> => 
   return pb.collection('documentos').getFullList<Documento>({
     filter: `viagem_id = "${tripId}" && usuario_id = "${userId}"`,
     sort: '-created',
+    expand: 'viagem_id',
   })
 }
 
@@ -43,6 +61,10 @@ export const createDocument = async (tripId: string, data: FormData) => {
   data.append('usuario_id', userId)
   data.append('viagem_id', tripId)
   return pb.collection('documentos').create<Documento>(data)
+}
+
+export const updateDocument = async (id: string, data: FormData) => {
+  return pb.collection('documentos').update<Documento>(id, data)
 }
 
 export const deleteDocument = async (id: string) => {
