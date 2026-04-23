@@ -288,8 +288,10 @@ export default function Index() {
                     </CardContent>
 
                     <CardFooter className="pt-0 border-t border-slate-100 mt-auto p-4">
-                      <Button variant="outline" className="w-full gap-2">
-                        Abrir Detalhes <ChevronRight className="h-4 w-4" />
+                      <Button variant="outline" className="w-full gap-2" asChild>
+                        <Link to={`/trips/${trip.id}`}>
+                          Abrir Detalhes <ChevronRight className="h-4 w-4" />
+                        </Link>
                       </Button>
                     </CardFooter>
                   </Card>

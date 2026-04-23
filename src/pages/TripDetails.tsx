@@ -69,7 +69,9 @@ export default function TripDetails() {
   useRealtime('trips', (e) => {
     if (e.record.id === id) loadData()
   })
-  useRealtime('viajantes', () => loadData())
+  useRealtime('viajantes', (e) => {
+    if (e.record.viagem_id === id || !e.record.viagem_id) loadData()
+  })
 
   const handleAddTraveler = async (e: React.FormEvent) => {
     e.preventDefault()
