@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Card, CardContent } from '@/components/ui/card'
+import { PdfViewer } from '@/components/PdfViewer'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { format, parseISO, differenceInDays, isValid } from 'date-fns'
@@ -458,28 +459,17 @@ export default function TripDocuments() {
       <Dialog open={!!viewDoc} onOpenChange={(o) => !o && setViewDoc(null)}>
         <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="truncate pr-8">{viewDoc?.nome_arquivo}</DialogTitle>
+            <DialogTitle className="truncate pr-8">Visualizar Documento</DialogTitle>
           </DialogHeader>
-          <div className="flex-1 bg-slate-100 rounded-md overflow-hidden relative">
-            {viewDoc && (
-              <object
-                data={getDocumentUrl(viewDoc)}
-                type="application/pdf"
-                className="w-full h-full border-0"
-              >
-                <div className="flex flex-col items-center justify-center h-full text-slate-500 p-8 text-center bg-slate-50">
-                  <AlertCircle className="h-12 w-12 mb-4 text-slate-400" />
-                  <p className="font-medium text-slate-700">Não foi possível visualizar o PDF.</p>
-                  <p className="text-sm mt-2">Faça o download para acessar o arquivo localmente.</p>
-                </div>
-              </object>
-            )}
+          <div className="text-sm text-slate-500 mb-2 truncate">{viewDoc?.nome_arquivo}</div>
+          <div className="flex-1 bg-slate-100 rounded-md overflow-hidden relative flex flex-col">
+            {viewDoc && <PdfViewer url={getDocumentUrl(viewDoc)} title={viewDoc.nome_arquivo} />}
           </div>
           <DialogFooter className="mt-4 gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setViewDoc(null)}>
               Fechar
             </Button>
-            {viewDoc && (
+            {viewDoc && getDocumentUrl(viewDoc) && (
               <Button asChild>
                 <a href={getDocumentUrl(viewDoc)} download target="_blank" rel="noreferrer">
                   <Download className="mr-2 h-4 w-4" /> Download
