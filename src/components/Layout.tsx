@@ -83,10 +83,12 @@ export default function Layout() {
 
             <nav className="hidden md:flex gap-6">
               {navItems.map((item) => {
-                const isActive = location.pathname === item.path
+                const isActive =
+                  location.pathname === item.path &&
+                  !(item.name === 'Orçamento' && item.path === '/trips')
                 return (
                   <Link
-                    key={item.path}
+                    key={item.name}
                     to={item.path}
                     className={cn(
                       'text-sm font-medium transition-colors hover:text-primary relative py-5 flex items-center gap-1.5',

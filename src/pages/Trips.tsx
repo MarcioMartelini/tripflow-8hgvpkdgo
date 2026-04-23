@@ -56,13 +56,13 @@ export default function Trips() {
     setIsDeleting(true)
     try {
       await deleteViagem(tripToDelete)
+      setTrips((prev) => prev.filter((t) => t.id !== tripToDelete))
       toast({ title: 'Viagem deletada com sucesso!' })
       setTripToDelete(null)
     } catch (err: any) {
-      const errorMessage = err?.message || 'Ocorreu um erro desconhecido ao deletar a viagem.'
       toast({
         title: 'Erro ao deletar a viagem',
-        description: errorMessage,
+        description: 'Não foi possível deletar a viagem. Verifique sua conexão e tente novamente.',
         variant: 'destructive',
       })
     } finally {
@@ -228,7 +228,7 @@ export default function Trips() {
               {isDeleting && (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
               )}
-              {isDeleting ? 'Deletando...' : 'Deletar'}
+              {isDeleting ? 'Deletando...' : 'Confirmar'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
