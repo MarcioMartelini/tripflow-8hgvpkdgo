@@ -16,9 +16,9 @@ import { ExpenseManager } from '@/components/trip-budget/ExpenseManager'
 export default function TripBudget() {
   const { tripId } = useParams<{ tripId: string }>()
   const { user } = useAuth()
-  const baseCurrency = user?.moeda_padrao || 'BRL'
 
   const [trip, setTrip] = useState<Trip | null>(null)
+  const baseCurrency = trip?.moeda || user?.moeda_padrao || 'BRL'
   const [orcamentos, setOrcamentos] = useState<OrcamentoPlanejado[]>([])
   const [despesas, setDespesas] = useState<Despesa[]>([])
   const [loading, setLoading] = useState(true)

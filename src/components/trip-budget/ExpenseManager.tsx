@@ -184,6 +184,7 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
                   <TableHead>Categoria</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="text-center">Moeda</TableHead>
                   <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -196,6 +197,7 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
                     <TableCell className="text-right font-medium">
                       {formatCurrency(d.valor, d.moeda)}
                     </TableCell>
+                    <TableCell className="text-center">{d.moeda}</TableCell>
                     <TableCell className="text-center space-x-2">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(d)}>
                         <Edit2 className="h-4 w-4 text-slate-500 hover:text-slate-900" />

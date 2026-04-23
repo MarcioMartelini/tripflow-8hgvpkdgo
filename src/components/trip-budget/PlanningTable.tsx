@@ -26,6 +26,7 @@ export function PlanningTable({ data, baseCurrency, tripId, onReload }: Props) {
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const [isDirty, setIsDirty] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
   const { toast } = useToast()
 
   useEffect(() => {
@@ -40,14 +41,20 @@ export function PlanningTable({ data, baseCurrency, tripId, onReload }: Props) {
   const handleInputChange = (cat: string, val: string) => {
     setInputs((prev) => ({ ...prev, [cat]: val }))
     setIsDirty(true)
+    setErrorMsg('')
   }
 
   const handleSave = async () => {
     setSaving(true)
+    setErrorMsg('')
     try {
       for (const d of data) {
         const newVal = parseFloat(inputs[d.category] || '0')
-        if (isNaN(newVal) || newVal < 0) throw new Error('Valor inválido')
+        if (isNaN(newVal) || newVal < 0) {
+          setErrorMsg('Os valores planejados devem ser maiores ou iguais a zero.')
+          setSaving(false)
+          return
+        }
 
         if (newVal !== d.originalPlannedValue || (newVal > 0 && !d.orcamentoId)) {
           if (d.orcamentoId) {
@@ -78,8 +85,11 @@ export function PlanningTable({ data, baseCurrency, tripId, onReload }: Props) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Planejamento por Categoria</CardTitle>
+      <CardHeader className="flex flex-row items-start justify-between">
+        <div className="flex flex-col gap-1">
+          <CardTitle>Planejamento por Categoria</CardTitle>
+          {errorMsg && <p className="text-sm text-red-500">{errorMsg}</p>}
+        </div>
         {isDirty && (
           <Button size="sm" onClick={handleSave} disabled={saving}>
             {saving ? 'Salvando...' : 'Salvar Alterações'}
