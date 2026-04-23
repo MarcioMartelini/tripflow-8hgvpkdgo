@@ -31,3 +31,35 @@ export const getDespesas = async (tripId: string): Promise<Despesa[]> => {
     sort: '-data_despesa',
   })
 }
+
+export const createOrcamento = async (
+  data: Partial<OrcamentoPlanejado>,
+): Promise<OrcamentoPlanejado> => {
+  return await pb.collection('orcamento_planejado').create<OrcamentoPlanejado>(data)
+}
+
+export const updateOrcamento = async (
+  id: string,
+  data: Partial<OrcamentoPlanejado>,
+): Promise<OrcamentoPlanejado> => {
+  return await pb.collection('orcamento_planejado').update<OrcamentoPlanejado>(id, data)
+}
+
+export const deleteOrcamento = async (id: string): Promise<void> => {
+  await pb.collection('orcamento_planejado').delete(id)
+}
+
+export const createDespesa = async (data: Partial<Despesa>): Promise<Despesa> => {
+  if (!data.usuario_id && pb.authStore.record) {
+    data.usuario_id = pb.authStore.record.id
+  }
+  return await pb.collection('despesas').create<Despesa>(data)
+}
+
+export const updateDespesa = async (id: string, data: Partial<Despesa>): Promise<Despesa> => {
+  return await pb.collection('despesas').update<Despesa>(id, data)
+}
+
+export const deleteDespesa = async (id: string): Promise<void> => {
+  await pb.collection('despesas').delete(id)
+}

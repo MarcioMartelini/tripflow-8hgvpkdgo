@@ -19,6 +19,15 @@ export const getTripDocuments = async (tripId: string): Promise<Documento[]> => 
   })
 }
 
+export const getAllDocuments = async (): Promise<Documento[]> => {
+  const user = pb.authStore.record
+  if (!user) return []
+  return await pb.collection('documentos').getFullList<Documento>({
+    filter: `usuario_id = "${user.id}"`,
+    sort: '-created',
+  })
+}
+
 export const getDocumentosCount = async (): Promise<number> => {
   const user = pb.authStore.record
   if (!user) return 0
@@ -34,6 +43,13 @@ export const createDocument = async (tripId: string, formData: FormData): Promis
     formData.append('usuario_id', pb.authStore.record.id)
   }
   return await pb.collection('documentos').create<Documento>(formData)
+}
+
+export const updateDocument = async (
+  id: string,
+  data: FormData | Partial<Documento>,
+): Promise<Documento> => {
+  return await pb.collection('documentos').update<Documento>(id, data)
 }
 
 export const deleteDocument = async (id: string): Promise<void> => {
