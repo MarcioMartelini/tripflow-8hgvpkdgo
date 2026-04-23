@@ -50,6 +50,9 @@ export const deleteDocument = async (id: string) => {
 }
 
 export const getDocumentUrl = (doc: Documento) => {
+  if (doc.id.startsWith('m0ckdoc')) {
+    return 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
+  }
   if (doc.arquivo) {
     return pb.files.getURL(doc, doc.arquivo)
   }
