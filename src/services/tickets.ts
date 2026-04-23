@@ -3,7 +3,7 @@ import pb from '@/lib/pocketbase/client'
 export interface Ticket {
   id: string
   viagem_id: string
-  tipo: 'voo' | 'trem' | 'onibus' | 'outro'
+  tipo: string
   numero_confirmacao?: string
   origem?: string
   destino?: string
@@ -14,19 +14,12 @@ export interface Ticket {
   companhia?: string
   preco?: number
   moeda?: string
-  status?: 'confirmado' | 'pendente' | 'cancelado'
-  created: string
-  updated: string
+  status?: string
 }
 
-export const getTickets = (viagemId: string) =>
-  pb
-    .collection('tickets')
-    .getFullList<Ticket>({ filter: `viagem_id = "${viagemId}"`, sort: 'data_saida' })
-
-export const createTicket = (data: Partial<Ticket>) => pb.collection('tickets').create<Ticket>(data)
-
-export const updateTicket = (id: string, data: Partial<Ticket>) =>
-  pb.collection('tickets').update<Ticket>(id, data)
-
-export const deleteTicket = (id: string) => pb.collection('tickets').delete(id)
+export const getTickets = async (tripId: string): Promise<Ticket[]> => {
+  return await pb.collection('tickets').getFullList<Ticket>({
+    filter: `viagem_id = "${tripId}"`,
+    sort: 'data_saida',
+  })
+}

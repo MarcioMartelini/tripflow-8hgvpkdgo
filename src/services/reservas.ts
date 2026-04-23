@@ -3,7 +3,7 @@ import pb from '@/lib/pocketbase/client'
 export interface Reserva {
   id: string
   viagem_id: string
-  tipo: 'hotel' | 'restaurante' | 'atividade' | 'outro'
+  tipo: string
   nome: string
   local?: string
   data_checkin: string
@@ -13,21 +13,13 @@ export interface Reserva {
   numero_confirmacao?: string
   preco?: number
   moeda?: string
-  status?: 'confirmado' | 'pendente' | 'cancelado'
+  status?: string
   notas?: string
-  created: string
-  updated: string
 }
 
-export const getReservas = (viagemId: string) =>
-  pb
-    .collection('reservas')
-    .getFullList<Reserva>({ filter: `viagem_id = "${viagemId}"`, sort: 'data_checkin' })
-
-export const createReserva = (data: Partial<Reserva>) =>
-  pb.collection('reservas').create<Reserva>(data)
-
-export const updateReserva = (id: string, data: Partial<Reserva>) =>
-  pb.collection('reservas').update<Reserva>(id, data)
-
-export const deleteReserva = (id: string) => pb.collection('reservas').delete(id)
+export const getReservas = async (tripId: string): Promise<Reserva[]> => {
+  return await pb.collection('reservas').getFullList<Reserva>({
+    filter: `viagem_id = "${tripId}"`,
+    sort: 'data_checkin',
+  })
+}

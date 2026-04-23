@@ -4,25 +4,24 @@ export interface Alerta {
   id: string
   usuario_id: string
   viagem_id?: string
-  tipo: 'voo' | 'hotel' | 'atividade' | 'documento' | 'outro'
+  tipo: string
   mensagem: string
   data_alerta?: string
   lido: boolean
   created: string
-  updated: string
 }
 
-export const getAlertas = async (usuarioId: string): Promise<Alerta[]> => {
-  return pb.collection('alertas').getFullList({
-    filter: `usuario_id = "${usuarioId}"`,
+export const getAlertas = async (userId: string): Promise<Alerta[]> => {
+  return await pb.collection('alertas').getFullList<Alerta>({
+    filter: `usuario_id = "${userId}"`,
     sort: '-created',
   })
 }
 
-export const markAlertaAsRead = async (id: string) => {
-  return pb.collection('alertas').update(id, { lido: true })
+export const markAlertaAsRead = async (id: string): Promise<Alerta> => {
+  return await pb.collection('alertas').update<Alerta>(id, { lido: true })
 }
 
-export const deleteAlerta = async (id: string) => {
-  return pb.collection('alertas').delete(id)
+export const deleteAlerta = async (id: string): Promise<void> => {
+  await pb.collection('alertas').delete(id)
 }

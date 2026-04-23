@@ -6,8 +6,6 @@ export interface OrcamentoPlanejado {
   categoria: string
   valor_planejado: number
   moeda: string
-  created: string
-  updated: string
 }
 
 export interface Despesa {
@@ -15,34 +13,21 @@ export interface Despesa {
   viagem_id: string
   usuario_id: string
   categoria: string
-  descricao: string
+  descricao?: string
   valor: number
   moeda: string
-  data_despesa: string
-  created: string
-  updated: string
+  data_despesa?: string
 }
 
-export const getOrcamentos = (viagemId: string) =>
-  pb
-    .collection('orcamento_planejado')
-    .getFullList<OrcamentoPlanejado>({ filter: `viagem_id = "${viagemId}"` })
+export const getOrcamentos = async (tripId: string): Promise<OrcamentoPlanejado[]> => {
+  return await pb.collection('orcamento_planejado').getFullList<OrcamentoPlanejado>({
+    filter: `viagem_id = "${tripId}"`,
+  })
+}
 
-export const getDespesas = (viagemId: string) =>
-  pb
-    .collection('despesas')
-    .getFullList<Despesa>({ filter: `viagem_id = "${viagemId}"`, sort: '-data_despesa' })
-
-export const createOrcamento = (data: Partial<OrcamentoPlanejado>) =>
-  pb.collection('orcamento_planejado').create<OrcamentoPlanejado>(data)
-
-export const updateOrcamento = (id: string, data: Partial<OrcamentoPlanejado>) =>
-  pb.collection('orcamento_planejado').update<OrcamentoPlanejado>(id, data)
-
-export const createDespesa = (data: Partial<Despesa>) =>
-  pb.collection('despesas').create<Despesa>(data)
-
-export const updateDespesa = (id: string, data: Partial<Despesa>) =>
-  pb.collection('despesas').update<Despesa>(id, data)
-
-export const deleteDespesa = (id: string) => pb.collection('despesas').delete(id)
+export const getDespesas = async (tripId: string): Promise<Despesa[]> => {
+  return await pb.collection('despesas').getFullList<Despesa>({
+    filter: `viagem_id = "${tripId}"`,
+    sort: '-data_despesa',
+  })
+}

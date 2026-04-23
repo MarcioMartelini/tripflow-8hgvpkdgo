@@ -7,21 +7,19 @@ export interface Traveler {
   nome: string
   email?: string
   documento?: string
-  created: string
-  updated: string
 }
 
-export const getTravelers = (tripId: string) => {
-  return pb.collection('viajantes').getFullList<Traveler>({
+export const getTravelers = async (tripId: string): Promise<Traveler[]> => {
+  return await pb.collection('viajantes').getFullList<Traveler>({
     filter: `viagem_id = "${tripId}"`,
-    sort: '-created',
+    sort: 'nome',
   })
 }
 
-export const createTraveler = (data: Partial<Traveler>) => {
-  return pb.collection('viajantes').create<Traveler>(data)
+export const createTraveler = async (data: Partial<Traveler>): Promise<Traveler> => {
+  return await pb.collection('viajantes').create<Traveler>(data)
 }
 
-export const deleteTraveler = (id: string) => {
-  return pb.collection('viajantes').delete(id)
+export const deleteTraveler = async (id: string): Promise<void> => {
+  await pb.collection('viajantes').delete(id)
 }
