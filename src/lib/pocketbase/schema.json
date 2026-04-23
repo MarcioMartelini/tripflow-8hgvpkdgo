@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-23T19:46:50.290Z",
+  "generatedAt": "2026-04-23T19:53:45.702Z",
   "collections": [
     {
       "name": "users",
@@ -457,11 +457,11 @@
       "name": "tickets",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.id != '' && viagem_id.owner_id = @request.auth.id",
+        "view": "@request.auth.id != '' && viagem_id.owner_id = @request.auth.id",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "update": "@request.auth.id != '' && viagem_id.owner_id = @request.auth.id",
+        "delete": "@request.auth.id != '' && viagem_id.owner_id = @request.auth.id"
       },
       "fields": [
         {
@@ -474,7 +474,7 @@
         {
           "name": "tipo",
           "type": "select",
-          "required": false,
+          "required": true,
           "system": false,
           "selectValues": ["voo", "trem", "onibus", "outro"]
         },
@@ -560,17 +560,20 @@
           "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": []
+      "indexes": [
+        "CREATE INDEX `idx_tickets_viagem_id` ON `tickets` (viagem_id)",
+        "CREATE INDEX `idx_tickets_status` ON `tickets` (status)"
+      ]
     },
     {
       "name": "reservas",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != ''",
-        "view": "@request.auth.id != ''",
+        "list": "@request.auth.id != '' && viagem_id.owner_id = @request.auth.id",
+        "view": "@request.auth.id != '' && viagem_id.owner_id = @request.auth.id",
         "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != ''",
-        "delete": "@request.auth.id != ''"
+        "update": "@request.auth.id != '' && viagem_id.owner_id = @request.auth.id",
+        "delete": "@request.auth.id != '' && viagem_id.owner_id = @request.auth.id"
       },
       "fields": [
         {
@@ -583,7 +586,7 @@
         {
           "name": "tipo",
           "type": "select",
-          "required": false,
+          "required": true,
           "system": false,
           "selectValues": ["hotel", "restaurante", "atividade", "outro"]
         },
@@ -602,7 +605,7 @@
         {
           "name": "data_checkin",
           "type": "date",
-          "required": false,
+          "required": true,
           "system": false
         },
         {
@@ -669,7 +672,10 @@
           "autodateTriggers": ["onCreate", "onUpdate"]
         }
       ],
-      "indexes": []
+      "indexes": [
+        "CREATE INDEX `idx_reservas_viagem_id` ON `reservas` (viagem_id)",
+        "CREATE INDEX `idx_reservas_data_checkin` ON `reservas` (data_checkin)"
+      ]
     },
     {
       "name": "despesas",
