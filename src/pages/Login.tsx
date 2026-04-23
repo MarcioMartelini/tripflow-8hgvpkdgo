@@ -12,8 +12,8 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card'
-import { Plane } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import logoUrl from '@/assets/design-sem-nome-314e3.png'
 
 export default function Login() {
   const [email, setEmail] = useState('marcio_martelini@hotmail.com')
@@ -41,9 +41,8 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
-      <div className="flex items-center gap-2 mb-8 animate-fade-in-down">
-        <Plane className="h-8 w-8 text-primary" />
-        <span className="text-3xl font-bold text-primary">TripFlow</span>
+      <div className="flex items-center justify-center mb-8 animate-fade-in-down">
+        <img src={logoUrl} alt="TripFlow Logo" className="h-12 object-contain" />
       </div>
       <Card className="w-full max-w-md shadow-lg animate-fade-in-up">
         <CardHeader className="space-y-1 text-center">

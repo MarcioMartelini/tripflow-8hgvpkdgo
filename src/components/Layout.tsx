@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, Navigate } from 'react-router-dom'
-import { Plane, User, LogOut, Bell } from 'lucide-react'
+import { User, LogOut, Bell } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,7 @@ import { NewTripDialog } from './NewTripDialog'
 import pb from '@/lib/pocketbase/client'
 import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
+import logoUrl from '@/assets/design-sem-nome-314e3.png'
 
 export default function Layout() {
   const { user, signOut, loading } = useAuth()
@@ -77,8 +78,7 @@ export default function Layout() {
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2">
-              <Plane className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold text-primary">TripFlow</span>
+              <img src={logoUrl} alt="TripFlow Logo" className="h-8 object-contain" />
             </Link>
 
             <nav className="hidden md:flex gap-6">
