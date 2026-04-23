@@ -44,10 +44,18 @@ migrate(
       {
         tipo: 'passaporte',
         nome_arquivo: 'passaporte_marcio.pdf',
-        data_expiracao: greenDate.toISOString(),
+        data_expiracao: greenDate.toISOString().replace('T', ' '),
       },
-      { tipo: 'visto', nome_arquivo: 'visto_marcio.pdf', data_expiracao: yellowDate.toISOString() },
-      { tipo: 'seguro', nome_arquivo: 'seguro_marcio.pdf', data_expiracao: redDate.toISOString() },
+      {
+        tipo: 'visto',
+        nome_arquivo: 'visto_marcio.pdf',
+        data_expiracao: yellowDate.toISOString().replace('T', ' '),
+      },
+      {
+        tipo: 'seguro',
+        nome_arquivo: 'seguro_marcio.pdf',
+        data_expiracao: redDate.toISOString().replace('T', ' '),
+      },
     ]
 
     const docsCol = app.findCollectionByNameOrId('documentos')
