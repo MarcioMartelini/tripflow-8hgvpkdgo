@@ -155,7 +155,7 @@ export default function TripDetails() {
                 <span className="font-medium">{formatCurrency(trip.budget_total, trip.moeda)}</span>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full">
               <Button variant="outline" className="w-full" asChild>
                 <Link to={`/documents/${trip.id}`}>
                   <FileText className="mr-2 h-4 w-4" /> Documentos
@@ -164,6 +164,11 @@ export default function TripDetails() {
               <Button variant="outline" className="w-full" asChild>
                 <Link to={`/trips/${trip.id}/tickets-reservas`}>
                   <Ticket className="mr-2 h-4 w-4" /> Logística
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full" asChild>
+                <Link to={`/trips/${trip.id}/budget`}>
+                  <Banknote className="mr-2 h-4 w-4" /> Orçamento
                 </Link>
               </Button>
               <Button className="w-full" asChild>

@@ -13,6 +13,7 @@ import TripDetails from './pages/TripDetails'
 import TripItinerary from './pages/TripItinerary'
 import TripDocuments from './pages/TripDocuments'
 import TripTicketsReservations from './pages/TripTicketsReservations'
+import TripBudget from './pages/TripBudget'
 import Documents from './pages/Documents'
 import { AuthProvider } from './hooks/use-auth'
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/documents" element={<Documents />} />
             <Route path="/documents/:tripId" element={<TripDocuments />} />
             <Route path="/budget" element={<Generic title="Orçamento" />} />
+            <Route path="/trips/:tripId/budget" element={<TripBudget />} />
             <Route path="/alerts" element={<Generic title="Alertas" />} />
           </Route>
           <Route path="/login" element={<Login />} />

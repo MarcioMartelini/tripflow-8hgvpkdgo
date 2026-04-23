@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-23T20:09:43.058Z",
+  "generatedAt": "2026-04-23T20:16:56.913Z",
   "collections": [
     {
       "name": "users",
@@ -805,6 +805,67 @@
           "name": "lido",
           "type": "bool",
           "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "orcamento_planejado",
+      "type": "base",
+      "apiRules": {
+        "list": "viagem_id.owner_id = @request.auth.id",
+        "view": "viagem_id.owner_id = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "viagem_id.owner_id = @request.auth.id",
+        "delete": "viagem_id.owner_id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "viagem_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "trips"
+        },
+        {
+          "name": "categoria",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": [
+            "hospedagem",
+            "transporte",
+            "alimentação",
+            "atividades",
+            "compras",
+            "outro"
+          ]
+        },
+        {
+          "name": "valor_planejado",
+          "type": "number",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "moeda",
+          "type": "text",
+          "required": true,
           "system": false
         },
         {
