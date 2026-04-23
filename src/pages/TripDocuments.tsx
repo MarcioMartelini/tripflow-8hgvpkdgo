@@ -108,7 +108,7 @@ const getExpirationStatus = (dateStr?: string) => {
     }
   }
   return {
-    label: 'Válido',
+    label: `Documento expira em ${daysDiff} dias`,
     color: 'bg-green-100 text-green-800 border-green-200',
     icon: CheckCircle2,
   }
@@ -168,12 +168,12 @@ export default function TripDocuments() {
       return
     }
     if (f.type !== 'application/pdf') {
-      setFileError('Apenas arquivos PDF são permitidos.')
+      setFileError('Apenas arquivos PDF são aceitos')
       setFile(null)
       return
     }
     if (f.size > 5242880) {
-      setFileError('O arquivo excede o limite de 5MB.')
+      setFileError('Arquivo deve ter no máximo 5MB')
       setFile(null)
       return
     }
@@ -192,7 +192,7 @@ export default function TripDocuments() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     if (selected < today) {
-      setDateError('A data de expiração deve ser no futuro.')
+      setDateError('Data deve ser no futuro')
     } else {
       setDateError('')
     }
@@ -215,7 +215,7 @@ export default function TripDocuments() {
     try {
       await createDocument(fd)
       setUploadProgress(100)
-      toast({ title: 'Arquivo enviado com sucesso!' })
+      toast({ title: 'Documento adicionado com sucesso!' })
       setOpenUpload(false)
       setFile(null)
       setTipo('')
@@ -297,7 +297,8 @@ export default function TripDocuments() {
                     <SelectItem value="outro">Outro</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+                {!tipo && file && <p className="text-sm text-red-500">Tipo é obrigatório</p>}
+              </div>{' '}
               <div className="space-y-2">
                 <Label>Arquivo PDF *</Label>
                 <div
@@ -493,7 +494,7 @@ export default function TripDocuments() {
                 if (deleteDoc) {
                   try {
                     await deleteDocument(deleteDoc.id)
-                    toast({ title: 'Documento deletado com sucesso.' })
+                    toast({ title: 'Documento deletado com sucesso!' })
                     loadData()
                   } catch {
                     toast({ title: 'Erro ao deletar documento.', variant: 'destructive' })
