@@ -11,7 +11,6 @@ migrate(
 
     // Ensure file upload field
     if (!col.fields.getByName('arquivo')) {
-      const { FileField } = require('pocketbase/models/schema') // For illustration, but we use the global new FileField in context
       col.fields.add(
         new FileField({
           name: 'arquivo',
