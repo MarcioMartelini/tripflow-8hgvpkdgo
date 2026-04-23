@@ -43,6 +43,7 @@ migrate(
           {
             name: 'arquivo',
             type: 'file',
+            required: true,
             maxSelect: 1,
             maxSize: 5242880,
             mimeTypes: ['application/pdf'],
@@ -59,6 +60,7 @@ migrate(
       col.fields.add(
         new FileField({
           name: 'arquivo',
+          required: true,
           maxSelect: 1,
           maxSize: 5242880,
           mimeTypes: ['application/pdf'],
