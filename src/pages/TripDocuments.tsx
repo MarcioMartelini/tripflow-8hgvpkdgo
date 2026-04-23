@@ -102,13 +102,13 @@ const getExpirationStatus = (dateStr?: string) => {
   }
   if (daysDiff <= 30) {
     return {
-      label: `Documento expira em ${daysDiff} dias`,
+      label: `Expira em ${daysDiff} dias`,
       color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       icon: Clock,
     }
   }
   return {
-    label: `Documento expira em ${daysDiff} dias`,
+    label: 'Válido',
     color: 'bg-green-100 text-green-800 border-green-200',
     icon: CheckCircle2,
   }
@@ -137,6 +137,18 @@ export default function TripDocuments() {
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleOpenUploadChange = (open: boolean) => {
+    setOpenUpload(open)
+    if (!open) {
+      setFile(null)
+      setFileError('')
+      setTipo('')
+      setDataExp('')
+      setDateError('')
+      setNotas('')
+    }
+  }
 
   const loadData = async () => {
     if (!tripId) return
@@ -215,11 +227,7 @@ export default function TripDocuments() {
       await createDocument(tripId!, fd)
       setUploadProgress(100)
       toast({ title: 'Documento adicionado com sucesso!' })
-      setOpenUpload(false)
-      setFile(null)
-      setTipo('')
-      setDataExp('')
-      setNotas('')
+      handleOpenUploadChange(false)
       loadData()
     } catch {
       toast({ title: 'Erro ao fazer upload do documento.', variant: 'destructive' })
@@ -271,7 +279,7 @@ export default function TripDocuments() {
           <p className="text-slate-500 mt-1">Documentos privados da viagem {trip?.title}</p>
         </div>
 
-        <Dialog open={openUpload} onOpenChange={setOpenUpload}>
+        <Dialog open={openUpload} onOpenChange={handleOpenUploadChange}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" /> Adicionar Documento
@@ -350,9 +358,19 @@ export default function TripDocuments() {
                 />
               </div>
               {uploading && <Progress value={uploadProgress} className="h-2" />}
-              <Button type="submit" className="w-full" disabled={isSubmitDisabled}>
-                {uploading ? 'Enviando...' : 'Adicionar'}
-              </Button>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleOpenUploadChange(false)}
+                  disabled={uploading}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={isSubmitDisabled}>
+                  {uploading ? 'Enviando...' : 'Adicionar'}
+                </Button>
+              </div>
             </form>
           </DialogContent>
         </Dialog>
