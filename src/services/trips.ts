@@ -40,7 +40,3 @@ export const createTrip = async (data: Partial<Trip>): Promise<Trip> => {
 export const updateTrip = async (id: string, data: Partial<Trip>): Promise<Trip> => {
   return await pb.collection('trips').update<Trip>(id, data)
 }
-
-export const deleteTrip = async (id: string): Promise<void> => {
-  await pb.collection('trips').delete(id)
-}

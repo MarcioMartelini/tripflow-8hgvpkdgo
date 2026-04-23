@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getTrips, deleteTrip, Trip } from '@/services/trips'
+import { getTrips, Trip } from '@/services/trips'
+import { deleteViagem } from '@/services/viagens'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { TripFormModal } from '@/components/TripFormModal'
@@ -54,11 +55,16 @@ export default function Trips() {
     if (!tripToDelete) return
     setIsDeleting(true)
     try {
-      await deleteTrip(tripToDelete)
-      toast({ title: 'Viagem excluída com sucesso!' })
+      await deleteViagem(tripToDelete)
+      toast({ title: 'Viagem deletada com sucesso!' })
       setTripToDelete(null)
-    } catch (err) {
-      toast({ title: 'Erro ao excluir a viagem. Tente novamente.', variant: 'destructive' })
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Ocorreu um erro desconhecido ao deletar a viagem.'
+      toast({
+        title: 'Erro ao deletar a viagem',
+        description: errorMessage,
+        variant: 'destructive',
+      })
     } finally {
       setIsDeleting(false)
     }
@@ -191,7 +197,7 @@ export default function Trips() {
                   onClick={() => setTripToDelete(trip.id)}
                   className="w-full text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                 >
-                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Deletar
                 </Button>
               </CardFooter>
             </Card>
@@ -205,7 +211,7 @@ export default function Trips() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza que deseja excluir esta viagem?</AlertDialogTitle>
+            <AlertDialogTitle>Tem certeza que deseja deletar esta viagem?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta ação não pode ser desfeita. Todos os dados, itinerários e documentos vinculados a
               esta viagem serão removidos.
@@ -213,8 +219,16 @@ export default function Trips() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? 'Excluindo...' : 'Excluir'}
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="gap-2"
+            >
+              {isDeleting && (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              )}
+              {isDeleting ? 'Deletando...' : 'Deletar'}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
