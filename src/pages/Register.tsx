@@ -73,7 +73,7 @@ export default function Register() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-4">
       <div className="flex items-center justify-center mb-8 animate-fade-in-down">
-        <img src={logoUrl} alt="TripFlow Logo" className="h-12 object-contain" />
+        <img src={logoUrl} alt="TripFlow Logo" className="h-[72px] object-contain" />
       </div>
       <Card className="w-full max-w-md shadow-lg animate-fade-in-up">
         <CardHeader className="space-y-1 text-center">

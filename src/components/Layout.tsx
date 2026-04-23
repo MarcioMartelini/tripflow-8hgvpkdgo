@@ -75,10 +75,10 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="sticky top-0 z-30 w-full border-b bg-white shadow-sm">
-        <div className="container flex h-16 items-center justify-between px-4">
+        <div className="container flex h-20 items-center justify-between px-4">
           <div className="flex items-center gap-8">
             <Link to="/" className="flex items-center gap-2">
-              <img src={logoUrl} alt="TripFlow Logo" className="h-8 object-contain" />
+              <img src={logoUrl} alt="TripFlow Logo" className="h-12 object-contain" />
             </Link>
 
             <nav className="hidden md:flex gap-6">
@@ -91,7 +91,7 @@ export default function Layout() {
                     key={item.name}
                     to={item.path}
                     className={cn(
-                      'text-sm font-medium transition-colors hover:text-primary relative py-5 flex items-center gap-1.5',
+                      'text-sm font-medium transition-colors hover:text-primary relative py-7 flex items-center gap-1.5',
                       isActive ? 'text-primary' : 'text-slate-500',
                     )}
                   >
