@@ -166,7 +166,7 @@ export default function TripDocuments() {
     fd.append('tipo', tipo)
     fd.append('nome_arquivo', file.name)
     fd.append('arquivo', file)
-    if (dataExp) fd.append('data_expiracao', dataExp)
+    if (dataExp) fd.append('data_expiracao', `${dataExp} 12:00:00.000Z`)
     if (notas) fd.append('notas', notas)
 
     try {
