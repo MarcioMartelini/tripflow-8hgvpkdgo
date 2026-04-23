@@ -168,7 +168,7 @@ export default function TripDetails() {
                 </Link>
               </Button>
               <Button variant="outline" className="w-full" asChild>
-                <Link to={`/trips/${trip.id}/budget`}>
+                <Link to={`/orcamento/${trip.id}`}>
                   <Banknote className="mr-2 h-4 w-4" /> Orçamento
                 </Link>
               </Button>

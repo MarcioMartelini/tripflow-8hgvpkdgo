@@ -41,8 +41,7 @@ const App = () => (
             <Route path="/trips/:tripId/tickets-reservas" element={<TripTicketsReservations />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/documents/:tripId" element={<TripDocuments />} />
-            <Route path="/budget" element={<Generic title="Orçamento" />} />
-            <Route path="/trips/:tripId/budget" element={<TripBudget />} />
+            <Route path="/orcamento/:tripId" element={<TripBudget />} />
             <Route path="/trips/:id/report" element={<TripReport />} />
             <Route path="/alerts" element={<Alerts />} />
           </Route>
