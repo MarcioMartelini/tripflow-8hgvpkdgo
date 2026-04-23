@@ -42,4 +42,7 @@ export const updateOrcamento = (id: string, data: Partial<OrcamentoPlanejado>) =
 export const createDespesa = (data: Partial<Despesa>) =>
   pb.collection('despesas').create<Despesa>(data)
 
+export const updateDespesa = (id: string, data: Partial<Despesa>) =>
+  pb.collection('despesas').update<Despesa>(id, data)
+
 export const deleteDespesa = (id: string) => pb.collection('despesas').delete(id)
