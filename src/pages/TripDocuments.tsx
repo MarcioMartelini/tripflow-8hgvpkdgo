@@ -215,7 +215,7 @@ export default function TripDocuments() {
     try {
       await createDocument(fd)
       setUploadProgress(100)
-      toast({ title: 'Documento adicionado com sucesso!' })
+      toast({ title: 'Arquivo enviado com sucesso!' })
       setOpenUpload(false)
       setFile(null)
       setTipo('')
