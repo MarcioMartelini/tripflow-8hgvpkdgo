@@ -10,7 +10,7 @@ migrate(
     let user
     try {
       user = app.findAuthRecordByEmail('_pb_users_auth_', 'marcio_martelini@hotmail.com')
-    } catch (_) {
+    } catch (err) {
       const users = app.findCollectionByNameOrId('_pb_users_auth_')
       user = new Record(users)
       user.setEmail('marcio_martelini@hotmail.com')
@@ -23,7 +23,7 @@ migrate(
     let trip
     try {
       trip = app.findFirstRecordByData('trips', 'title', 'Rio de Janeiro 2026')
-    } catch (_) {
+    } catch (err) {
       const trips = app.findCollectionByNameOrId('trips')
       trip = new Record(trips)
       trip.set('title', 'Rio de Janeiro 2026')
@@ -52,20 +52,17 @@ migrate(
 
     const docsCol = app.findCollectionByNameOrId('documentos')
 
-    for (const d of docsToSeed) {
+    for (let i = 0; i < docsToSeed.length; i++) {
+      const d = docsToSeed[i]
       try {
         app.findFirstRecordByData('documentos', 'nome_arquivo', d.nome_arquivo)
-      } catch (_) {
+      } catch (err) {
         const doc = new Record(docsCol)
         doc.set('usuario_id', user.id)
         doc.set('viagem_id', trip.id)
         doc.set('tipo', d.tipo)
         doc.set('nome_arquivo', d.nome_arquivo)
         doc.set('data_expiracao', d.data_expiracao)
-        doc.set(
-          'url_arquivo',
-          'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-        )
         app.save(doc)
       }
     }
@@ -78,12 +75,13 @@ migrate(
     collection.deleteRule = "@request.auth.id != ''"
     app.save(collection)
 
-    const docsToSeed = ['passaporte_marcio.pdf', 'visto_marcio.pdf', 'seguro_marcio.pdf']
-    for (const name of docsToSeed) {
+    const docsToSeedNames = ['passaporte_marcio.pdf', 'visto_marcio.pdf', 'seguro_marcio.pdf']
+    for (let i = 0; i < docsToSeedNames.length; i++) {
+      const name = docsToSeedNames[i]
       try {
         const doc = app.findFirstRecordByData('documentos', 'nome_arquivo', name)
         app.delete(doc)
-      } catch (_) {}
+      } catch (err) {}
     }
   },
 )
