@@ -5,13 +5,13 @@ export type TripStatus = 'planned' | 'ongoing' | 'completed'
 export interface Trip {
   id: string
   nome?: string
-  title?: string
+  title: string
   destino?: string
-  destination?: string
+  destination: string
   data_inicio?: string
-  start_date?: string
+  start_date: string
   data_fim?: string
-  end_date?: string
+  end_date: string
   orcamento_planejado?: number
   budget_total?: number
   moeda?: string

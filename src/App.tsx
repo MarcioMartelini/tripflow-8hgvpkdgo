@@ -8,10 +8,12 @@ import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import Trips from './pages/Trips'
+import TripDetails from './pages/TripDetails'
 import { AuthProvider } from './hooks/use-auth'
 
 const Generic = ({ title }: { title: string }) => (
-  <div className="container py-12 flex flex-col items-center justify-center">
+  <div className="container py-12 flex flex-col items-center justify-center animate-fade-in">
     <h1 className="text-3xl font-bold mb-4">{title}</h1>
     <p className="text-muted-foreground">Página em construção.</p>
   </div>
@@ -26,7 +28,8 @@ const App = () => (
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
-            <Route path="/trips" element={<Generic title="Minhas Viagens" />} />
+            <Route path="/trips" element={<Trips />} />
+            <Route path="/trips/:id" element={<TripDetails />} />
             <Route path="/documents" element={<Generic title="Documentos" />} />
             <Route path="/budget" element={<Generic title="Orçamento" />} />
             <Route path="/alerts" element={<Generic title="Alertas" />} />
