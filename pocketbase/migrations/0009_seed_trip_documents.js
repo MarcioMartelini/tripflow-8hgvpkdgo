@@ -3,14 +3,14 @@ migrate(
     let user
     try {
       user = app.findAuthRecordByEmail('_pb_users_auth_', 'marcio_martelini@hotmail.com')
-    } catch (_) {
+    } catch (err) {
       return // Skip if admin user doesn't exist
     }
 
     let trip
     try {
       trip = app.findFirstRecordByData('trips', 'title', 'Rio de Janeiro 2026')
-    } catch (_) {
+    } catch (err) {
       const tripsCol = app.findCollectionByNameOrId('trips')
       trip = new Record(tripsCol)
       trip.set('title', 'Rio de Janeiro 2026')
@@ -28,7 +28,7 @@ migrate(
     // 1. Passaporte Marcio (Green, far future)
     try {
       app.findFirstRecordByData('documentos', 'nome_arquivo', 'passaporte_marcio.pdf')
-    } catch (_) {
+    } catch (err) {
       const doc = new Record(docsCol)
       doc.set('usuario_id', user.id)
       doc.set('viagem_id', trip.id)
@@ -44,7 +44,7 @@ migrate(
     // 2. Visto Marcio (Yellow, within 30 days)
     try {
       app.findFirstRecordByData('documentos', 'nome_arquivo', 'visto_marcio.pdf')
-    } catch (_) {
+    } catch (err) {
       const doc = new Record(docsCol)
       doc.set('usuario_id', user.id)
       doc.set('viagem_id', trip.id)
@@ -60,7 +60,7 @@ migrate(
     // 3. Seguro Viagem Marcio (Red, past date)
     try {
       app.findFirstRecordByData('documentos', 'nome_arquivo', 'seguro_viagem_marcio.pdf')
-    } catch (_) {
+    } catch (err) {
       const doc = new Record(docsCol)
       doc.set('usuario_id', user.id)
       doc.set('viagem_id', trip.id)
@@ -78,11 +78,11 @@ migrate(
     try {
       const doc1 = app.findFirstRecordByData('documentos', 'nome_arquivo', 'passaporte_marcio.pdf')
       app.delete(doc1)
-    } catch (_) {}
+    } catch (err) {}
     try {
       const doc2 = app.findFirstRecordByData('documentos', 'nome_arquivo', 'visto_marcio.pdf')
       app.delete(doc2)
-    } catch (_) {}
+    } catch (err) {}
     try {
       const doc3 = app.findFirstRecordByData(
         'documentos',
@@ -90,6 +90,6 @@ migrate(
         'seguro_viagem_marcio.pdf',
       )
       app.delete(doc3)
-    } catch (_) {}
+    } catch (err) {}
   },
 )
