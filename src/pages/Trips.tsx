@@ -26,6 +26,8 @@ export default function Trips() {
   const [trips, setTrips] = useState<Trip[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [tripToDelete, setTripToDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
 
   const loadTrips = async () => {
@@ -48,12 +50,17 @@ export default function Trips() {
     loadTrips()
   })
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!tripToDelete) return
+    setIsDeleting(true)
     try {
-      await deleteTrip(id)
-      toast({ title: 'Viagem deletada com sucesso!' })
+      await deleteTrip(tripToDelete)
+      toast({ title: 'Viagem excluída com sucesso!' })
+      setTripToDelete(null)
     } catch (err) {
-      toast({ title: 'Erro ao deletar viagem', variant: 'destructive' })
+      toast({ title: 'Erro ao excluir a viagem. Tente novamente.', variant: 'destructive' })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -178,42 +185,40 @@ export default function Trips() {
                   </Button>
                 </TripFormModal>
 
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Deletar
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>
-                        Tem certeza que deseja deletar esta viagem?
-                      </AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta ação não pode ser desfeita. Todos os dados, itinerários e documentos
-                        vinculados a esta viagem serão removidos.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleDelete(trip.id)}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        Deletar
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTripToDelete(trip.id)}
+                  className="w-full text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+                </Button>
               </CardFooter>
             </Card>
           ))}
         </div>
       )}
+
+      <AlertDialog
+        open={!!tripToDelete}
+        onOpenChange={(open) => !open && !isDeleting && setTripToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza que deseja excluir esta viagem?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Todos os dados, itinerários e documentos vinculados a
+              esta viagem serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
