@@ -115,7 +115,7 @@ const getExpirationStatus = (dateStr?: string) => {
 }
 
 export default function TripDocuments() {
-  const { id } = useParams<{ id: string }>()
+  const { tripId } = useParams<{ tripId: string }>()
   const { toast } = useToast()
 
   const [trip, setTrip] = useState<Trip | null>(null)
@@ -139,11 +139,11 @@ export default function TripDocuments() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadData = async () => {
-    if (!id) return
+    if (!tripId) return
     setLoading(true)
     setError(false)
     try {
-      const [t, d] = await Promise.all([getTrip(id), getTripDocuments(id)])
+      const [t, d] = await Promise.all([getTrip(tripId), getTripDocuments(tripId)])
       setTrip(t)
       setDocs(d)
     } catch {
@@ -155,10 +155,10 @@ export default function TripDocuments() {
 
   useEffect(() => {
     loadData()
-  }, [id])
+  }, [tripId])
 
   useRealtime('documentos', () => {
-    if (id) loadData()
+    if (tripId) loadData()
   })
 
   const handleFileChange = (f: File | undefined) => {
@@ -205,7 +205,7 @@ export default function TripDocuments() {
     setUploading(true)
     setUploadProgress(30)
     const fd = new FormData()
-    fd.append('viagem_id', id!)
+    fd.append('viagem_id', tripId!)
     fd.append('tipo', tipo)
     fd.append('nome_arquivo', file.name)
     fd.append('arquivo', file)
@@ -261,7 +261,7 @@ export default function TripDocuments() {
   return (
     <div className="container py-8 px-4 animate-fade-in space-y-6">
       <Button variant="ghost" className="mb-2 -ml-4 text-slate-500" asChild>
-        <Link to={`/trips/${id}`}>
+        <Link to={`/trips/${tripId}`}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
         </Link>
       </Button>

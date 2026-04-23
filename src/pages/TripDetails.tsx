@@ -156,7 +156,7 @@ export default function TripDetails() {
             </div>
             <div className="grid grid-cols-2 gap-2 w-full">
               <Button variant="outline" className="w-full" asChild>
-                <Link to={`/trips/${trip.id}/documents`}>
+                <Link to={`/documents/${trip.id}`}>
                   <FileText className="mr-2 h-4 w-4" /> Documentos
                 </Link>
               </Button>

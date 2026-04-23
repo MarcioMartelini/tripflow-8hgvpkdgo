@@ -19,13 +19,17 @@ export default function Layout() {
   if (loading) return null
   if (!user) return <Navigate to="/login" replace />
 
+  const tripMatch = location.pathname.match(/\/(?:trips|documents|budget|alerts)\/([a-zA-Z0-9_-]+)/)
+  const activeTripId = tripMatch ? tripMatch[1] : ''
+
   const navItems = [
     { name: 'Dashboard', path: '/' },
     { name: 'Minhas Viagens', path: '/trips' },
-    { name: 'Documentos', path: '/documents' },
-    { name: 'Orçamento', path: '/budget' },
-    { name: 'Alertas', path: '/alerts' },
   ]
+  if (activeTripId) {
+    navItems.push({ name: 'Documentos', path: `/documents/${activeTripId}` })
+  }
+  navItems.push({ name: 'Orçamento', path: '/budget' }, { name: 'Alertas', path: '/alerts' })
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
