@@ -205,7 +205,6 @@ export default function TripDocuments() {
     setUploading(true)
     setUploadProgress(30)
     const fd = new FormData()
-    fd.append('viagem_id', tripId!)
     fd.append('tipo', tipo)
     fd.append('nome_arquivo', file.name)
     fd.append('arquivo', file)
@@ -213,7 +212,7 @@ export default function TripDocuments() {
     if (notas) fd.append('notas', notas)
 
     try {
-      await createDocument(fd)
+      await createDocument(tripId!, fd)
       setUploadProgress(100)
       toast({ title: 'Documento adicionado com sucesso!' })
       setOpenUpload(false)

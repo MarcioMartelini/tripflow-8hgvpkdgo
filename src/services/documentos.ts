@@ -36,11 +36,12 @@ export const getTripDocuments = async (tripId: string): Promise<Documento[]> => 
   })
 }
 
-export const createDocument = async (data: FormData) => {
+export const createDocument = async (tripId: string, data: FormData) => {
   const userId = pb.authStore.record?.id
   if (!userId) throw new Error('User not authenticated')
 
   data.append('usuario_id', userId)
+  data.append('viagem_id', tripId)
   return pb.collection('documentos').create<Documento>(data)
 }
 
