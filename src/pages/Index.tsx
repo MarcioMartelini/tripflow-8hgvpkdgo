@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getTrips, type Trip } from '@/services/trips'
-import { getUpcomingEvents, type TripEvent } from '@/services/events'
+import { getUpcomingItinerario, type ItinerarioEvent } from '@/services/itinerario'
+import { getDocumentosCount } from '@/services/documentos'
 import { useRealtime } from '@/hooks/use-realtime'
 import {
   Card,
@@ -35,7 +36,8 @@ import { NewTripDialog } from '@/components/NewTripDialog'
 
 export default function Index() {
   const [trips, setTrips] = useState<Trip[]>([])
-  const [events, setEvents] = useState<TripEvent[]>([])
+  const [events, setEvents] = useState<ItinerarioEvent[]>([])
+  const [docCount, setDocCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -43,9 +45,14 @@ export default function Index() {
     try {
       setLoading(true)
       setError(null)
-      const [tripsData, eventsData] = await Promise.all([getTrips(), getUpcomingEvents()])
+      const [tripsData, eventsData, docs] = await Promise.all([
+        getTrips(),
+        getUpcomingItinerario(),
+        getDocumentosCount(),
+      ])
       setTrips(tripsData)
       setEvents(eventsData.items)
+      setDocCount(docs)
     } catch (e: any) {
       console.error(e)
       setError('Ocorreu um erro ao carregar seus dados. Por favor, tente novamente.')
@@ -59,21 +66,25 @@ export default function Index() {
   }, [])
 
   useRealtime('trips', () => loadData())
-  useRealtime('events', () => loadData())
+  useRealtime('itinerario', () => loadData())
 
   const activeTrips = trips
     .filter((t) => t.status === 'ongoing' || t.status === 'planned')
     .sort((a, b) => {
       if (a.status === 'ongoing' && b.status !== 'ongoing') return -1
       if (b.status === 'ongoing' && a.status !== 'ongoing') return 1
-      return new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+      const aDate = a.data_inicio || a.start_date || ''
+      const bDate = b.data_inicio || b.start_date || ''
+      return new Date(aDate).getTime() - new Date(bDate).getTime()
     })
     .slice(0, 3)
 
-  const totalBudget = trips.reduce((acc, trip) => acc + (trip.budget_total || 0), 0)
+  const totalBudget = trips.reduce(
+    (acc, trip) => acc + (trip.orcamento_planejado || trip.budget_total || 0),
+    0,
+  )
 
-  // Simulated document count
-  const totalDocuments = trips.length > 0 ? 12 : 0
+  const totalDocuments = docCount
 
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -203,9 +214,11 @@ export default function Index() {
               </div>
             ) : (
               activeTrips.map((trip) => {
-                const start = new Date(trip.start_date)
-                const end = new Date(trip.end_date)
+                const start = new Date((trip.data_inicio || trip.start_date) as string)
+                const end = new Date((trip.data_fim || trip.end_date) as string)
                 const isOngoing = trip.status === 'ongoing'
+                const tripTitle = trip.nome || trip.title
+                const tripDest = trip.destino || trip.destination
 
                 return (
                   <Card
@@ -228,12 +241,12 @@ export default function Index() {
                           {isOngoing ? 'Em andamento' : 'Planejada'}
                         </Badge>
                       </div>
-                      <CardTitle className="text-xl leading-tight line-clamp-1" title={trip.title}>
-                        {trip.title}
+                      <CardTitle className="text-xl leading-tight line-clamp-1" title={tripTitle}>
+                        {tripTitle}
                       </CardTitle>
                       <CardDescription className="flex items-center gap-1.5 text-sm">
                         <MapPin className="h-3.5 w-3.5" />
-                        <span className="truncate">{trip.destination}</span>
+                        <span className="truncate">{tripDest}</span>
                       </CardDescription>
                     </CardHeader>
 
@@ -318,7 +331,7 @@ export default function Index() {
 
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                         <p className="text-sm font-semibold text-slate-900 truncate">
-                          {event.description}
+                          {event.atividade}
                         </p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
                           <span className="flex items-center gap-1 font-medium bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
@@ -326,11 +339,13 @@ export default function Index() {
                             <span className="capitalize">{event.type}</span>
                           </span>
                           <span>•</span>
-                          <span>{event.time}</span>
-                          {event.expand?.trip_id && (
+                          <span>{event.hora_inicio}</span>
+                          {event.expand?.viagem_id && (
                             <>
                               <span>•</span>
-                              <span className="truncate">{event.expand.trip_id.title}</span>
+                              <span className="truncate">
+                                {event.expand.viagem_id.nome || event.expand.viagem_id.title}
+                              </span>
                             </>
                           )}
                         </div>

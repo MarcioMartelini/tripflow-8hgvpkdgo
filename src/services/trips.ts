@@ -4,20 +4,33 @@ export type TripStatus = 'planned' | 'ongoing' | 'completed'
 
 export interface Trip {
   id: string
-  title: string
-  destination: string
-  start_date: string
-  end_date: string
+  nome?: string
+  title?: string
+  destino?: string
+  destination?: string
+  data_inicio?: string
+  start_date?: string
+  data_fim?: string
+  end_date?: string
+  orcamento_planejado?: number
+  budget_total?: number
+  moeda?: string
+  descricao?: string
   owner_id: string
   status: TripStatus
   travelers_count?: number
-  budget_total?: number
   progress?: number
   created: string
   updated: string
 }
 
-export const getTrips = () => pb.collection('trips').getFullList<Trip>({ sort: '-created' })
+export const getTrips = () => {
+  const userId = pb.authStore.record?.id
+  return pb.collection('trips').getFullList<Trip>({
+    sort: '-created',
+    filter: userId ? `owner_id = "${userId}"` : '',
+  })
+}
 
 export const getTrip = (id: string) => pb.collection('trips').getOne<Trip>(id)
 

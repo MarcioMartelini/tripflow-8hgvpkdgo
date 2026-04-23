@@ -26,11 +26,17 @@ export function NewTripDialog() {
     try {
       await createTrip({
         title: fd.get('title') as string,
+        nome: fd.get('title') as string,
         destination: fd.get('destination') as string,
+        destino: fd.get('destination') as string,
         start_date: new Date(fd.get('start_date') as string).toISOString(),
+        data_inicio: new Date(fd.get('start_date') as string).toISOString(),
         end_date: new Date(fd.get('end_date') as string).toISOString(),
+        data_fim: new Date(fd.get('end_date') as string).toISOString(),
         travelers_count: Number(fd.get('travelers_count')),
         budget_total: Number(fd.get('budget_total')),
+        orcamento_planejado: Number(fd.get('budget_total')),
+        moeda: 'BRL',
         progress: 0,
         status: 'planned',
       })
