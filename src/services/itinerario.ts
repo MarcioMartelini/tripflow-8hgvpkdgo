@@ -26,3 +26,18 @@ export const getUpcomingItinerario = () => {
     filter: userId ? `viagem_id.owner_id = "${userId}"` : '',
   })
 }
+
+export const getItinerarioByTrip = (viagemId: string) => {
+  return pb.collection('itinerario').getFullList<ItinerarioEvent>({
+    filter: `viagem_id = "${viagemId}"`,
+    sort: 'data,hora_inicio',
+  })
+}
+
+export const createItinerario = (data: Partial<ItinerarioEvent>) =>
+  pb.collection('itinerario').create<ItinerarioEvent>(data)
+
+export const updateItinerario = (id: string, data: Partial<ItinerarioEvent>) =>
+  pb.collection('itinerario').update<ItinerarioEvent>(id, data)
+
+export const deleteItinerario = (id: string) => pb.collection('itinerario').delete(id)

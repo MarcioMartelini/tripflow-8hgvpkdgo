@@ -28,6 +28,7 @@ import {
   MapPin,
   Calendar,
   Banknote,
+  Map,
 } from 'lucide-react'
 
 export default function TripDetails() {
@@ -139,17 +140,24 @@ export default function TripDetails() {
               <MapPin className="h-4 w-4" /> {trip.destination}
             </p>
           </div>
-          <div className="flex gap-4 items-center bg-white border px-4 py-2 rounded-lg shadow-sm w-full md:w-auto overflow-x-auto">
-            <div className="flex items-center gap-2 text-sm border-r pr-4 whitespace-nowrap">
-              <Calendar className="h-4 w-4 text-slate-400" />
-              <span className="font-medium">
-                {formatDate(trip.start_date)} até {formatDate(trip.end_date)}
-              </span>
+          <div className="flex flex-col gap-3 w-full md:w-auto">
+            <div className="flex gap-4 items-center bg-white border px-4 py-2 rounded-lg shadow-sm overflow-x-auto">
+              <div className="flex items-center gap-2 text-sm border-r pr-4 whitespace-nowrap">
+                <Calendar className="h-4 w-4 text-slate-400" />
+                <span className="font-medium">
+                  {formatDate(trip.start_date)} até {formatDate(trip.end_date)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm whitespace-nowrap">
+                <Banknote className="h-4 w-4 text-slate-400" />
+                <span className="font-medium">{formatCurrency(trip.budget_total, trip.moeda)}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-sm whitespace-nowrap">
-              <Banknote className="h-4 w-4 text-slate-400" />
-              <span className="font-medium">{formatCurrency(trip.budget_total, trip.moeda)}</span>
-            </div>
+            <Button className="w-full" asChild>
+              <Link to={`/trips/${trip.id}/itinerary`}>
+                <Map className="mr-2 h-4 w-4" /> Ver Itinerário Completo
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
