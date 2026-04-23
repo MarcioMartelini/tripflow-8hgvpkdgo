@@ -10,6 +10,9 @@ export interface Trip {
   end_date: string
   owner_id: string
   status: TripStatus
+  travelers_count?: number
+  budget_total?: number
+  progress?: number
   created: string
   updated: string
 }

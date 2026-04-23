@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-23T17:45:30.358Z",
+  "generatedAt": "2026-04-23T18:08:04.671Z",
   "collections": [
     {
       "name": "users",
@@ -92,6 +92,84 @@
           "required": true,
           "system": false,
           "selectValues": ["planned", "ongoing", "completed"]
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "travelers_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "budget_total",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "progress",
+          "type": "number",
+          "required": false,
+          "system": false
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "events",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && trip_id.owner_id = @request.auth.id",
+        "view": "@request.auth.id != '' && trip_id.owner_id = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && trip_id.owner_id = @request.auth.id",
+        "delete": "@request.auth.id != '' && trip_id.owner_id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "trip_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "trips"
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["voo", "hotel", "atividade"]
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "time",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
         },
         {
           "name": "created",

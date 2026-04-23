@@ -29,6 +29,9 @@ export function NewTripDialog() {
         destination: fd.get('destination') as string,
         start_date: new Date(fd.get('start_date') as string).toISOString(),
         end_date: new Date(fd.get('end_date') as string).toISOString(),
+        travelers_count: Number(fd.get('travelers_count')),
+        budget_total: Number(fd.get('budget_total')),
+        progress: 0,
         status: 'planned',
       })
       toast({ title: 'Viagem criada com sucesso!' })
@@ -70,6 +73,30 @@ export function NewTripDialog() {
             <div className="space-y-2">
               <Label htmlFor="end_date">Data de Fim</Label>
               <Input id="end_date" name="end_date" type="date" required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="travelers_count">Viajantes</Label>
+              <Input
+                id="travelers_count"
+                name="travelers_count"
+                type="number"
+                min="1"
+                defaultValue="1"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="budget_total">Orçamento (R$)</Label>
+              <Input
+                id="budget_total"
+                name="budget_total"
+                type="number"
+                min="0"
+                defaultValue="0"
+                required
+              />
             </div>
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
