@@ -2,17 +2,39 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/currency'
 import { CategoryData } from '@/lib/budget-utils'
 import { AlertTriangle } from 'lucide-react'
+import { Trip } from '@/services/trips'
+import { differenceInDays, parseISO, isAfter } from 'date-fns'
 
 interface Props {
   data: CategoryData[]
   baseCurrency: string
+  trip: Trip
 }
 
-export function SummaryCards({ data, baseCurrency }: Props) {
+export function SummaryCards({ data, baseCurrency, trip }: Props) {
   const totalPlanned = data.reduce((acc, curr) => acc + curr.planned, 0)
   const totalRealized = data.reduce((acc, curr) => acc + curr.realized, 0)
   const diff = totalPlanned - totalRealized
-  const forecast = data.reduce((acc, curr) => acc + Math.max(curr.planned, curr.realized), 0)
+
+  const start = parseISO(trip.start_date)
+  const end = parseISO(trip.end_date)
+  const today = new Date()
+
+  const tripDuration = Math.max(1, differenceInDays(end, start) + 1)
+
+  let daysElapsed = 1
+  let remainingDays = tripDuration
+
+  if (isAfter(today, end)) {
+    daysElapsed = tripDuration
+    remainingDays = 0
+  } else if (isAfter(today, start)) {
+    daysElapsed = differenceInDays(today, start) + 1
+    remainingDays = tripDuration - daysElapsed
+  }
+
+  const averageDailyExpense = totalRealized / daysElapsed
+  const forecast = totalRealized + averageDailyExpense * remainingDays
 
   const percentRealized = totalPlanned > 0 ? (totalRealized / totalPlanned) * 100 : 0
 

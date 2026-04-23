@@ -109,9 +109,13 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
         moeda: form.moeda,
         data_despesa: new Date(form.data).toISOString(),
       }
-      if (editingId) await updateDespesa(editingId, payload)
-      else await createDespesa(payload)
-      toast({ title: 'Despesa salva com sucesso!' })
+      if (editingId) {
+        await updateDespesa(editingId, payload)
+        toast({ title: 'Despesa atualizada com sucesso!' })
+      } else {
+        await createDespesa(payload)
+        toast({ title: 'Despesa adicionada com sucesso!' })
+      }
       setModalOpen(false)
       onReload()
     } catch (error) {
@@ -123,7 +127,7 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
     if (!deletingId) return
     try {
       await deleteDespesa(deletingId)
-      toast({ title: 'Despesa removida!' })
+      toast({ title: 'Despesa deletada com sucesso!' })
       setDeleteOpen(false)
       onReload()
     } catch (error) {
@@ -163,10 +167,10 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
         </div>
       </CardHeader>
       <CardContent>
-        {despesas.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="py-12 flex flex-col items-center justify-center text-muted-foreground bg-slate-50/50 rounded-lg border border-dashed">
             <Receipt className="h-12 w-12 mb-4 text-slate-300" />
-            <p className="mb-4">Nenhuma despesa registrada</p>
+            <p className="mb-4">Nenhuma despesa encontrada</p>
             <Button onClick={openAdd} variant="outline">
               <Plus className="h-4 w-4 mr-2" /> Adicionar Despesa
             </Button>

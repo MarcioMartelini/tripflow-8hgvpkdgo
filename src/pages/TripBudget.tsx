@@ -101,7 +101,7 @@ export default function TripBudget() {
         <p className="text-sm text-muted-foreground">Moeda base: {baseCurrency}</p>
       </div>
 
-      <SummaryCards data={categoryData} baseCurrency={baseCurrency} />
+      <SummaryCards data={categoryData} baseCurrency={baseCurrency} trip={trip} />
       <ComparativeChart data={categoryData} baseCurrency={baseCurrency} />
       <PlanningTable
         data={categoryData}
