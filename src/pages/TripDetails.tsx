@@ -31,6 +31,7 @@ import {
   Map,
   FileText,
   Ticket,
+  BarChart2,
 } from 'lucide-react'
 
 export default function TripDetails() {
@@ -155,7 +156,7 @@ export default function TripDetails() {
                 <span className="font-medium">{formatCurrency(trip.budget_total, trip.moeda)}</span>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 w-full">
               <Button variant="outline" className="w-full" asChild>
                 <Link to={`/documents/${trip.id}`}>
                   <FileText className="mr-2 h-4 w-4" /> Documentos
@@ -171,7 +172,12 @@ export default function TripDetails() {
                   <Banknote className="mr-2 h-4 w-4" /> Orçamento
                 </Link>
               </Button>
-              <Button className="w-full" asChild>
+              <Button variant="outline" className="w-full" asChild>
+                <Link to={`/trips/${trip.id}/report`}>
+                  <BarChart2 className="mr-2 h-4 w-4" /> Relatório
+                </Link>
+              </Button>
+              <Button className="w-full col-span-2 sm:col-span-1 lg:col-span-1" asChild>
                 <Link to={`/trips/${trip.id}/itinerary`}>
                   <Map className="mr-2 h-4 w-4" /> Itinerário
                 </Link>

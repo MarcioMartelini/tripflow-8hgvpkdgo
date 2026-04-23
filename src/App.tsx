@@ -16,6 +16,7 @@ import TripTicketsReservations from './pages/TripTicketsReservations'
 import TripBudget from './pages/TripBudget'
 import Documents from './pages/Documents'
 import Alerts from './pages/Alerts'
+import TripReport from './pages/TripReport'
 import { AuthProvider } from './hooks/use-auth'
 
 const Generic = ({ title }: { title: string }) => (
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/documents/:tripId" element={<TripDocuments />} />
             <Route path="/budget" element={<Generic title="Orçamento" />} />
             <Route path="/trips/:tripId/budget" element={<TripBudget />} />
+            <Route path="/trips/:id/report" element={<TripReport />} />
             <Route path="/alerts" element={<Alerts />} />
           </Route>
           <Route path="/login" element={<Login />} />
