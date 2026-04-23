@@ -65,7 +65,7 @@ export default function Alerts() {
     if (!alertaToDelete) return
     try {
       await deleteAlerta(alertaToDelete)
-      toast({ title: 'Alerta deletado com sucesso' })
+      toast({ title: 'Alerta deletado com sucesso!' })
     } catch (err) {
       toast({ title: 'Erro ao deletar alerta', variant: 'destructive' })
     } finally {
