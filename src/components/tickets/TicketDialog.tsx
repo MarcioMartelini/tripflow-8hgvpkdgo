@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Ticket, createTicket, updateTicket } from '@/services/tickets'
 import { useToast } from '@/hooks/use-toast'
 
-const FormSelect = ({ label, value, onChange, options }: any) => (
+const FormSelect = ({ label, value, onChange, options, error }: any) => (
   <div className="space-y-1">
     <Label>{label}</Label>
     <Select value={value} onValueChange={onChange}>
@@ -34,6 +34,7 @@ const FormSelect = ({ label, value, onChange, options }: any) => (
         ))}
       </SelectContent>
     </Select>
+    {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
   </div>
 )
 
@@ -41,26 +42,67 @@ export function TicketDialog({ open, onOpenChange, tripId, ticket, onSuccess }: 
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<Partial<Ticket>>({})
 
   useEffect(() => {
     if (open) {
       setError('')
+      setFieldErrors({})
       setFormData(ticket || { tipo: 'voo', moeda: 'BRL', status: 'confirmado', preco: 0 })
     }
   }, [open, ticket])
 
-  const handleChange = (f: keyof Ticket, v: any) => setFormData((p) => ({ ...p, [f]: v }))
+  const handleChange = (f: keyof Ticket, v: any) => {
+    setFormData((p) => ({ ...p, [f]: v }))
+    if (fieldErrors[f]) setFieldErrors((p) => ({ ...p, [f]: '' }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setFieldErrors({})
+
+    const newErrors: Record<string, string> = {}
+
+    const requiredFields = [
+      'tipo',
+      'status',
+      'origem',
+      'destino',
+      'data_saida',
+      'hora_saida',
+      'data_chegada',
+      'hora_chegada',
+      'companhia',
+      'numero_confirmacao',
+      'preco',
+      'moeda',
+    ] as const
+    requiredFields.forEach((field) => {
+      if (formData[field] === undefined || formData[field] === null || formData[field] === '') {
+        newErrors[field] = 'Este campo é obrigatório.'
+      }
+    })
+
     const { data_saida, hora_saida, data_chegada, hora_chegada } = formData
 
     if (data_saida && hora_saida && data_chegada && hora_chegada) {
-      const start = new Date(`${data_saida.substring(0, 10)}T${hora_saida}`)
-      const end = new Date(`${data_chegada.substring(0, 10)}T${hora_chegada}`)
-      if (end < start) return setError('A chegada deve ser posterior à saída.')
+      const startD = data_saida.substring(0, 10)
+      const endD = data_chegada.substring(0, 10)
+
+      if (endD < startD) {
+        newErrors.data_chegada = 'A data de chegada deve ser igual ou posterior à data de saída.'
+      } else if (endD === startD) {
+        if (hora_chegada <= hora_saida) {
+          newErrors.hora_chegada = 'A hora de chegada deve ser posterior à hora de saída.'
+        }
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors)
+      return
     }
 
     setLoading(true)
@@ -68,7 +110,7 @@ export function TicketDialog({ open, onOpenChange, tripId, ticket, onSuccess }: 
       if (ticket?.id) await updateTicket(ticket.id, formData)
       else await createTicket({ ...formData, viagem_id: tripId } as Ticket)
 
-      toast({ title: ticket ? 'Ticket atualizado!' : 'Ticket criado!' })
+      toast({ title: ticket ? 'Ticket atualizado com sucesso!' : 'Ticket adicionado com sucesso!' })
       onSuccess()
       onOpenChange(false)
     } catch (err: any) {
@@ -86,12 +128,13 @@ export function TicketDialog({ open, onOpenChange, tripId, ticket, onSuccess }: 
           <DialogDescription>Preencha os detalhes do transporte.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormSelect
               label="Tipo *"
               value={formData.tipo}
               onChange={(v: any) => handleChange('tipo', v)}
+              error={fieldErrors.tipo}
               options={[
                 { value: 'voo', label: 'Voo' },
                 { value: 'trem', label: 'Trem' },
@@ -103,6 +146,7 @@ export function TicketDialog({ open, onOpenChange, tripId, ticket, onSuccess }: 
               label="Status *"
               value={formData.status}
               onChange={(v: any) => handleChange('status', v)}
+              error={fieldErrors.status}
               options={[
                 { value: 'confirmado', label: 'Confirmado' },
                 { value: 'pendente', label: 'Pendente' },
@@ -113,73 +157,99 @@ export function TicketDialog({ open, onOpenChange, tripId, ticket, onSuccess }: 
             <div className="space-y-1">
               <Label>Origem *</Label>
               <Input
-                required
                 value={formData.origem || ''}
                 onChange={(e) => handleChange('origem', e.target.value)}
               />
+              {fieldErrors.origem && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.origem}</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Destino *</Label>
               <Input
-                required
                 value={formData.destino || ''}
                 onChange={(e) => handleChange('destino', e.target.value)}
               />
+              {fieldErrors.destino && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.destino}</p>
+              )}
             </div>
 
             <div className="space-y-1">
               <Label>Data Saída *</Label>
               <Input
                 type="date"
-                required
                 value={formData.data_saida?.substring(0, 10) || ''}
-                onChange={(e) => handleChange('data_saida', e.target.value + ' 12:00:00.000Z')}
+                onChange={(e) =>
+                  handleChange(
+                    'data_saida',
+                    e.target.value ? e.target.value + ' 12:00:00.000Z' : '',
+                  )
+                }
               />
+              {fieldErrors.data_saida && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.data_saida}</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Hora Saída *</Label>
               <Input
                 type="time"
-                required
                 value={formData.hora_saida || ''}
                 onChange={(e) => handleChange('hora_saida', e.target.value)}
               />
+              {fieldErrors.hora_saida && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.hora_saida}</p>
+              )}
             </div>
 
             <div className="space-y-1">
               <Label>Data Chegada *</Label>
               <Input
                 type="date"
-                required
                 value={formData.data_chegada?.substring(0, 10) || ''}
-                onChange={(e) => handleChange('data_chegada', e.target.value + ' 12:00:00.000Z')}
+                onChange={(e) =>
+                  handleChange(
+                    'data_chegada',
+                    e.target.value ? e.target.value + ' 12:00:00.000Z' : '',
+                  )
+                }
               />
+              {fieldErrors.data_chegada && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.data_chegada}</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Hora Chegada *</Label>
               <Input
                 type="time"
-                required
                 value={formData.hora_chegada || ''}
                 onChange={(e) => handleChange('hora_chegada', e.target.value)}
               />
+              {fieldErrors.hora_chegada && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.hora_chegada}</p>
+              )}
             </div>
 
             <div className="space-y-1">
               <Label>Companhia *</Label>
               <Input
-                required
                 value={formData.companhia || ''}
                 onChange={(e) => handleChange('companhia', e.target.value)}
               />
+              {fieldErrors.companhia && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.companhia}</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Nº Confirmação *</Label>
               <Input
-                required
                 value={formData.numero_confirmacao || ''}
                 onChange={(e) => handleChange('numero_confirmacao', e.target.value)}
               />
+              {fieldErrors.numero_confirmacao && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.numero_confirmacao}</p>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -187,15 +257,20 @@ export function TicketDialog({ open, onOpenChange, tripId, ticket, onSuccess }: 
               <Input
                 type="number"
                 step="0.01"
-                required
-                value={formData.preco || ''}
-                onChange={(e) => handleChange('preco', parseFloat(e.target.value))}
+                value={formData.preco ?? ''}
+                onChange={(e) =>
+                  handleChange('preco', e.target.value ? parseFloat(e.target.value) : '')
+                }
               />
+              {fieldErrors.preco && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.preco}</p>
+              )}
             </div>
             <FormSelect
               label="Moeda *"
               value={formData.moeda}
               onChange={(v: any) => handleChange('moeda', v)}
+              error={fieldErrors.moeda}
               options={[
                 { value: 'BRL', label: 'BRL' },
                 { value: 'USD', label: 'USD' },

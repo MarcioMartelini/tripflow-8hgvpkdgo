@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Reserva, createReserva, updateReserva } from '@/services/reservas'
 import { useToast } from '@/hooks/use-toast'
 
-const FormSelect = ({ label, value, onChange, options }: any) => (
+const FormSelect = ({ label, value, onChange, options, error }: any) => (
   <div className="space-y-1">
     <Label>{label}</Label>
     <Select value={value} onValueChange={onChange}>
@@ -35,6 +35,7 @@ const FormSelect = ({ label, value, onChange, options }: any) => (
         ))}
       </SelectContent>
     </Select>
+    {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
   </div>
 )
 
@@ -42,26 +43,58 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<Partial<Reserva>>({})
 
   useEffect(() => {
     if (open) {
       setError('')
+      setFieldErrors({})
       setFormData(reserva || { tipo: 'hotel', moeda: 'BRL', status: 'confirmado', preco: 0 })
     }
   }, [open, reserva])
 
-  const handleChange = (f: keyof Reserva, v: any) => setFormData((p) => ({ ...p, [f]: v }))
+  const handleChange = (f: keyof Reserva, v: any) => {
+    setFormData((p) => ({ ...p, [f]: v }))
+    if (fieldErrors[f]) setFieldErrors((p) => ({ ...p, [f]: '' }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setFieldErrors({})
+
+    const newErrors: Record<string, string> = {}
+
+    const requiredFields = [
+      'tipo',
+      'status',
+      'nome',
+      'local',
+      'data_checkin',
+      'preco',
+      'moeda',
+    ] as const
+    requiredFields.forEach((field) => {
+      if (formData[field] === undefined || formData[field] === null || formData[field] === '') {
+        newErrors[field] = 'Este campo é obrigatório.'
+      }
+    })
+
     const { data_checkin, data_checkout } = formData
 
     if (data_checkin && data_checkout) {
-      const inD = new Date(data_checkin.substring(0, 10))
-      const outD = new Date(data_checkout.substring(0, 10))
-      if (outD < inD) return setError('Check-out deve ser igual ou posterior ao check-in.')
+      const inD = data_checkin.substring(0, 10)
+      const outD = data_checkout.substring(0, 10)
+
+      if (outD <= inD) {
+        newErrors.data_checkout = 'Check-out deve ser posterior ao check-in.'
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors)
+      return
     }
 
     setLoading(true)
@@ -69,7 +102,9 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
       if (reserva?.id) await updateReserva(reserva.id, formData)
       else await createReserva({ ...formData, viagem_id: tripId } as Reserva)
 
-      toast({ title: reserva ? 'Reserva atualizada!' : 'Reserva criada!' })
+      toast({
+        title: reserva ? 'Reserva atualizada com sucesso!' : 'Reserva adicionada com sucesso!',
+      })
       onSuccess()
       onOpenChange(false)
     } catch (err: any) {
@@ -87,12 +122,13 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
           <DialogDescription>Preencha os detalhes da sua reserva.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormSelect
               label="Tipo *"
               value={formData.tipo}
               onChange={(v: any) => handleChange('tipo', v)}
+              error={fieldErrors.tipo}
               options={[
                 { value: 'hotel', label: 'Hotel' },
                 { value: 'restaurante', label: 'Restaurante' },
@@ -104,6 +140,7 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
               label="Status *"
               value={formData.status}
               onChange={(v: any) => handleChange('status', v)}
+              error={fieldErrors.status}
               options={[
                 { value: 'confirmado', label: 'Confirmado' },
                 { value: 'pendente', label: 'Pendente' },
@@ -114,28 +151,37 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
             <div className="space-y-1">
               <Label>Nome *</Label>
               <Input
-                required
                 value={formData.nome || ''}
                 onChange={(e) => handleChange('nome', e.target.value)}
               />
+              {fieldErrors.nome && <p className="text-xs text-red-500 mt-1">{fieldErrors.nome}</p>}
             </div>
             <div className="space-y-1">
               <Label>Local *</Label>
               <Input
-                required
                 value={formData.local || ''}
                 onChange={(e) => handleChange('local', e.target.value)}
               />
+              {fieldErrors.local && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.local}</p>
+              )}
             </div>
 
             <div className="space-y-1">
               <Label>Data Check-in *</Label>
               <Input
                 type="date"
-                required
                 value={formData.data_checkin?.substring(0, 10) || ''}
-                onChange={(e) => handleChange('data_checkin', e.target.value + ' 12:00:00.000Z')}
+                onChange={(e) =>
+                  handleChange(
+                    'data_checkin',
+                    e.target.value ? e.target.value + ' 12:00:00.000Z' : '',
+                  )
+                }
               />
+              {fieldErrors.data_checkin && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.data_checkin}</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Hora Check-in</Label>
@@ -158,6 +204,9 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
                   )
                 }
               />
+              {fieldErrors.data_checkout && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.data_checkout}</p>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Hora Check-out</Label>
@@ -180,16 +229,21 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
               <Input
                 type="number"
                 step="0.01"
-                required
-                value={formData.preco || ''}
-                onChange={(e) => handleChange('preco', parseFloat(e.target.value))}
+                value={formData.preco ?? ''}
+                onChange={(e) =>
+                  handleChange('preco', e.target.value ? parseFloat(e.target.value) : '')
+                }
               />
+              {fieldErrors.preco && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.preco}</p>
+              )}
             </div>
 
             <FormSelect
               label="Moeda *"
               value={formData.moeda}
               onChange={(v: any) => handleChange('moeda', v)}
+              error={fieldErrors.moeda}
               options={[
                 { value: 'BRL', label: 'BRL' },
                 { value: 'USD', label: 'USD' },

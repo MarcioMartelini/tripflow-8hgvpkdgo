@@ -46,7 +46,7 @@ export function ReservaCard({ reserva, onEdit, onDelete }: Props) {
   const handleDelete = async () => {
     try {
       await deleteReserva(reserva.id)
-      toast({ title: 'Reserva deletada' })
+      toast({ title: 'Reserva deletada com sucesso!' })
       onDelete()
     } catch (err) {
       toast({ title: 'Erro ao deletar', variant: 'destructive' })

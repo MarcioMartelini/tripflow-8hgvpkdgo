@@ -46,7 +46,7 @@ export function TicketCard({ ticket, onEdit, onDelete }: Props) {
   const handleDelete = async () => {
     try {
       await deleteTicket(ticket.id)
-      toast({ title: 'Ticket deletado' })
+      toast({ title: 'Ticket deletado com sucesso!' })
       onDelete()
     } catch (err) {
       toast({ title: 'Erro ao deletar', variant: 'destructive' })

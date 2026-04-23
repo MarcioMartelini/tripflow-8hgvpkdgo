@@ -127,7 +127,7 @@ export default function TripTicketsReservations() {
         <CalendarDays className="h-12 w-12 text-slate-300 mb-4" />
       )}
       <h3 className="text-lg font-medium text-slate-700">
-        Nenhum {type === 'tickets' ? 'ticket' : 'reserva'} encontrado
+        {type === 'tickets' ? 'Nenhum ticket adicionado' : 'Nenhuma reserva adicionada'}
       </h3>
       <p className="text-slate-500 mt-1 mb-6 text-center max-w-sm">
         Você ainda não adicionou{' '}
