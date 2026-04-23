@@ -25,11 +25,10 @@ export default function Layout() {
   const navItems = [
     { name: 'Dashboard', path: '/' },
     { name: 'Minhas Viagens', path: '/trips' },
+    { name: 'Documentos', path: activeTripId ? `/documents/${activeTripId}` : '/documents' },
+    { name: 'Orçamento', path: '/budget' },
+    { name: 'Alertas', path: '/alerts' },
   ]
-  if (activeTripId) {
-    navItems.push({ name: 'Documentos', path: `/documents/${activeTripId}` })
-  }
-  navItems.push({ name: 'Orçamento', path: '/budget' }, { name: 'Alertas', path: '/alerts' })
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
