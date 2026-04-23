@@ -28,7 +28,7 @@ import {
   Building,
   Map,
 } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { Link } from 'react-router-dom'
@@ -75,7 +75,9 @@ export default function Index() {
       if (b.status === 'ongoing' && a.status !== 'ongoing') return 1
       const aDate = a.data_inicio || a.start_date || ''
       const bDate = b.data_inicio || b.start_date || ''
-      return new Date(aDate).getTime() - new Date(bDate).getTime()
+      const aTime = aDate ? new Date(aDate).getTime() : NaN
+      const bTime = bDate ? new Date(bDate).getTime() : NaN
+      return (Number.isNaN(aTime) ? Infinity : aTime) - (Number.isNaN(bTime) ? Infinity : bTime)
     })
     .slice(0, 3)
 
@@ -214,8 +216,12 @@ export default function Index() {
               </div>
             ) : (
               activeTrips.map((trip) => {
-                const start = new Date((trip.data_inicio || trip.start_date) as string)
-                const end = new Date((trip.data_fim || trip.end_date) as string)
+                const startRaw = trip.data_inicio || trip.start_date
+                const endRaw = trip.data_fim || trip.end_date
+                const start = startRaw ? new Date(startRaw as string) : null
+                const end = endRaw ? new Date(endRaw as string) : null
+                const isStartValid = start && isValid(start)
+                const isEndValid = end && isValid(end)
                 const isOngoing = trip.status === 'ongoing'
                 const tripTitle = trip.nome || trip.title
                 const tripDest = trip.destino || trip.destination
@@ -256,8 +262,13 @@ export default function Index() {
                           <div className="flex items-center gap-1.5">
                             <Calendar className="h-4 w-4 text-slate-400" />
                             <span>
-                              {format(start, 'dd/MM', { locale: ptBR })} -{' '}
-                              {format(end, 'dd/MM', { locale: ptBR })}
+                              {isStartValid && isEndValid
+                                ? `${format(start, 'dd/MM', { locale: ptBR })} - ${format(end, 'dd/MM', { locale: ptBR })}`
+                                : isStartValid
+                                  ? format(start, 'dd/MM', { locale: ptBR })
+                                  : isEndValid
+                                    ? `Até ${format(end, 'dd/MM', { locale: ptBR })}`
+                                    : 'Data não informada'}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5">
@@ -314,19 +325,28 @@ export default function Index() {
             ) : (
               <div className="divide-y divide-slate-100">
                 {events.map((event) => {
-                  const eventDate = new Date(event.date)
+                  const eventDateRaw = event.date
+                  const eventDate = eventDateRaw ? new Date(eventDateRaw) : null
+                  const isEventDateValid = eventDate && isValid(eventDate)
+
                   return (
                     <div
                       key={event.id}
                       className="p-4 flex gap-4 hover:bg-slate-50 transition-colors"
                     >
                       <div className="flex flex-col items-center justify-center w-12 shrink-0 border border-slate-200 rounded-lg bg-white shadow-sm py-1">
-                        <span className="text-xs font-bold text-primary uppercase">
-                          {format(eventDate, 'MMM', { locale: ptBR })}
-                        </span>
-                        <span className="text-lg font-bold text-slate-700 leading-none">
-                          {format(eventDate, 'dd')}
-                        </span>
+                        {isEventDateValid ? (
+                          <>
+                            <span className="text-xs font-bold text-primary uppercase">
+                              {format(eventDate, 'MMM', { locale: ptBR })}
+                            </span>
+                            <span className="text-lg font-bold text-slate-700 leading-none">
+                              {format(eventDate, 'dd')}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-xl font-bold text-slate-300">-</span>
+                        )}
                       </div>
 
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
