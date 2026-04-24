@@ -1,8 +1,10 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useState } from 'react'
 import { Documento, getDocumentUrl } from '@/services/documentos'
 import { format, parseISO, differenceInDays, isValid } from 'date-fns'
+import { PdfViewerDialog } from '@/components/PdfViewerDialog'
 import {
   FileText,
   Trash2,
@@ -53,6 +55,7 @@ interface DocumentCardProps {
 }
 
 export function DocumentCard({ doc, onEdit, onDelete }: DocumentCardProps) {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const exp = getExpirationStatus(doc.data_expiracao)
   return (
     <Card className="animate-fade-in flex flex-col h-full hover:shadow-md transition-shadow">
@@ -82,7 +85,7 @@ export function DocumentCard({ doc, onEdit, onDelete }: DocumentCardProps) {
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => window.open(getDocumentUrl(doc), '_blank')}
+              onClick={() => setPreviewUrl(getDocumentUrl(doc))}
             >
               <Eye className="h-4 w-4 mr-2" /> Ver Arquivo
             </Button>
@@ -100,6 +103,11 @@ export function DocumentCard({ doc, onEdit, onDelete }: DocumentCardProps) {
           </div>
         </div>
       </CardContent>
+      <PdfViewerDialog
+        url={previewUrl}
+        title={doc.nome_arquivo}
+        onClose={() => setPreviewUrl(null)}
+      />
     </Card>
   )
 }

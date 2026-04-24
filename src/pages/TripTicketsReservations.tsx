@@ -15,11 +15,21 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Ticket as TicketIcon, CalendarDays, AlertCircle, Plus } from 'lucide-react'
+import {
+  ArrowLeft,
+  Ticket as TicketIcon,
+  CalendarDays,
+  AlertCircle,
+  Plus,
+  Download,
+  Loader2,
+} from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
 import { TicketCard } from '@/components/tickets/TicketCard'
 import { ReservaCard } from '@/components/tickets/ReservaCard'
 import { TicketDialog } from '@/components/tickets/TicketDialog'
 import { ReservaDialog } from '@/components/tickets/ReservaDialog'
+import { PdfViewerDialog } from '@/components/PdfViewerDialog'
 
 export default function TripTicketsReservations() {
   const { tripId } = useParams<{ tripId: string }>()
@@ -39,6 +49,9 @@ export default function TripTicketsReservations() {
 
   const [reservaDialogOpen, setReservaDialogOpen] = useState(false)
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null)
+
+  const [previewFile, setPreviewFile] = useState<{ url: string; title: string } | null>(null)
+  const [downloadingAll, setDownloadingAll] = useState(false)
 
   const loadData = async () => {
     if (!tripId) return
@@ -91,6 +104,106 @@ export default function TripTicketsReservations() {
   const filteredReservas = reservas.filter(
     (r) => statusFilter === 'all' || r.status === statusFilter,
   )
+
+  const handleDownloadAll = async () => {
+    if (!tripId) return
+    setDownloadingAll(true)
+    try {
+      const tripFiles: { url: string; name: string }[] = []
+
+      // 1. Tickets
+      const tks = await pb.collection('tickets').getFullList({ filter: `viagem_id = "${tripId}"` })
+      for (const t of tks) {
+        const files = t.arquivo ? (Array.isArray(t.arquivo) ? t.arquivo : [t.arquivo]) : []
+        files.forEach((f, i) => {
+          tripFiles.push({
+            url: pb.files.getURL(t, f),
+            name: `Ticket_${t.tipo}_${t.id}_${i}.pdf`,
+          })
+        })
+      }
+
+      // 2. Reservas
+      const rsv = await pb.collection('reservas').getFullList({ filter: `viagem_id = "${tripId}"` })
+      for (const r of rsv) {
+        const files = r.arquivo ? (Array.isArray(r.arquivo) ? r.arquivo : [r.arquivo]) : []
+        files.forEach((f, i) => {
+          tripFiles.push({
+            url: pb.files.getURL(r, f),
+            name: `Reserva_${r.tipo}_${r.id}_${i}.pdf`,
+          })
+        })
+      }
+
+      // 3. Itinerario
+      const iti = await pb
+        .collection('itinerario')
+        .getFullList({ filter: `viagem_id = "${tripId}"` })
+      for (const it of iti) {
+        const files = it.arquivos ? (Array.isArray(it.arquivos) ? it.arquivos : [it.arquivos]) : []
+        files.forEach((f, i) => {
+          tripFiles.push({
+            url: pb.files.getURL(it, f),
+            name: `Itinerario_${it.tipo}_${it.id}_${i}.pdf`,
+          })
+        })
+      }
+
+      // 4. Despesas
+      const des = await pb.collection('despesas').getFullList({ filter: `viagem_id = "${tripId}"` })
+      for (const d of des) {
+        const files = d.arquivos ? (Array.isArray(d.arquivos) ? d.arquivos : [d.arquivos]) : []
+        files.forEach((f, i) => {
+          tripFiles.push({
+            url: pb.files.getURL(d, f),
+            name: `Despesa_${d.categoria}_${d.id}_${i}.pdf`,
+          })
+        })
+      }
+
+      // 5. Documentos
+      const doc = await pb
+        .collection('documentos')
+        .getFullList({ filter: `viagem_id = "${tripId}"` })
+      for (const d of doc) {
+        if (d.arquivo) {
+          tripFiles.push({
+            url: pb.files.getURL(d, d.arquivo),
+            name: `Documento_${d.tipo}_${d.id}.pdf`,
+          })
+        }
+      }
+
+      if (tripFiles.length === 0) {
+        toast({ title: 'Nenhum documento encontrado para esta viagem.', variant: 'destructive' })
+        setDownloadingAll(false)
+        return
+      }
+
+      toast({ title: `Baixando ${tripFiles.length} documentos...` })
+
+      for (const file of tripFiles) {
+        const response = await fetch(file.url)
+        const blob = await response.blob()
+        const blobUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = blobUrl
+        a.download = file.name
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(blobUrl)
+        await new Promise((r) => setTimeout(r, 500)) // 500ms delay between files
+      }
+
+      toast({ title: 'Downloads iniciados com sucesso!' })
+    } catch (err) {
+      console.error(err)
+      toast({ title: 'Erro ao baixar documentos.', variant: 'destructive' })
+    } finally {
+      setDownloadingAll(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -167,7 +280,21 @@ export default function TripTicketsReservations() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex w-full sm:w-auto items-center gap-2">
+          <div className="flex w-full sm:w-auto items-center gap-2 flex-wrap sm:flex-nowrap">
+            <Button
+              variant="outline"
+              onClick={handleDownloadAll}
+              disabled={downloadingAll}
+              className="shrink-0"
+            >
+              {downloadingAll ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              {downloadingAll ? 'Baixando...' : 'Baixar Comprovantes'}
+            </Button>
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Filtrar por Status" />
@@ -196,7 +323,13 @@ export default function TripTicketsReservations() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredTickets.map((t) => (
-                <TicketCard key={t.id} ticket={t} onEdit={handleEditTicket} onDelete={loadData} />
+                <TicketCard
+                  key={t.id}
+                  ticket={t}
+                  onEdit={handleEditTicket}
+                  onDelete={loadData}
+                  onPreview={(url, title) => setPreviewFile({ url, title })}
+                />
               ))}
             </div>
           )}
@@ -213,6 +346,7 @@ export default function TripTicketsReservations() {
                   reserva={r}
                   onEdit={handleEditReserva}
                   onDelete={loadData}
+                  onPreview={(url, title) => setPreviewFile({ url, title })}
                 />
               ))}
             </div>
@@ -233,6 +367,12 @@ export default function TripTicketsReservations() {
         tripId={tripId}
         reserva={editingReserva}
         onSuccess={loadData}
+      />
+
+      <PdfViewerDialog
+        url={previewFile?.url || null}
+        title={previewFile?.title || ''}
+        onClose={() => setPreviewFile(null)}
       />
     </div>
   )

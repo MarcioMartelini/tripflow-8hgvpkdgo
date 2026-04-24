@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { ItinerarioEvent } from '@/services/itinerario'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { PdfViewerDialog } from '@/components/PdfViewerDialog'
 import {
   Plane,
   Bed,
@@ -38,6 +40,8 @@ const getIcon = (tipo: string) => {
 }
 
 export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewProps) {
+  const [previewFile, setPreviewFile] = useState<{ url: string; title: string } | null>(null)
+
   if (events.length === 0) {
     return (
       <div className="text-center py-16 bg-white border border-dashed rounded-lg shadow-sm">
@@ -87,11 +91,15 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
                   <div className="mt-3 flex flex-wrap gap-2">
                     {(Array.isArray(event.arquivos) ? event.arquivos : [event.arquivos]).map(
                       (arquivo, idx, arr) => (
-                        <a
+                        <button
                           key={idx}
-                          href={pb.files.getURL(event as any, arquivo)}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          onClick={() => {
+                            const url = pb.files.getURL(event as any, arquivo)
+                            setPreviewFile({
+                              url,
+                              title: `Itinerário - ${event.atividade} - PDF ${arr.length > 1 ? idx + 1 : ''}`,
+                            })
+                          }}
                           className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs transition-colors border border-slate-200"
                           title={arquivo}
                         >
@@ -99,7 +107,7 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
                           <span className="truncate max-w-[150px]">
                             PDF {arr.length > 1 ? idx + 1 : ''}
                           </span>
-                        </a>
+                        </button>
                       ),
                     )}
                   </div>
@@ -124,6 +132,12 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
           </Card>
         </div>
       ))}
+
+      <PdfViewerDialog
+        url={previewFile?.url || null}
+        title={previewFile?.title || ''}
+        onClose={() => setPreviewFile(null)}
+      />
     </div>
   )
 }

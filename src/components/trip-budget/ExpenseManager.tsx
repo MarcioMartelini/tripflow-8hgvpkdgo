@@ -27,6 +27,7 @@ import { Edit2, Trash2, Plus, ArrowUpDown, Receipt, FileText } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/use-auth'
 import pb from '@/lib/pocketbase/client'
+import { PdfViewerDialog } from '@/components/PdfViewerDialog'
 
 interface Props {
   despesas: Despesa[]
@@ -57,6 +58,7 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
     moeda: 'BRL',
   })
   const [formError, setFormError] = useState('')
+  const [previewFile, setPreviewFile] = useState<{ url: string; title: string } | null>(null)
 
   const filtered = useMemo(() => {
     let res = [...despesas]
@@ -214,16 +216,20 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
                           <div className="flex flex-wrap gap-2 mt-1">
                             {(Array.isArray(d.arquivos) ? d.arquivos : [d.arquivos]).map(
                               (f, i, arr) => (
-                                <a
+                                <button
                                   key={i}
-                                  href={pb.files.getURL(d, f)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                  onClick={() => {
+                                    const url = pb.files.getURL(d, f)
+                                    setPreviewFile({
+                                      url,
+                                      title: `Despesa - ${d.descricao || d.categoria} - PDF ${arr.length > 1 ? i + 1 : ''}`,
+                                    })
+                                  }}
                                   className="inline-flex items-center text-xs text-blue-600 hover:underline bg-blue-50 px-1.5 py-0.5 rounded"
                                 >
                                   <FileText className="h-3 w-3 mr-1" />
                                   PDF {arr.length > 1 ? i + 1 : ''}
-                                </a>
+                                </button>
                               ),
                             )}
                           </div>
@@ -256,6 +262,12 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
           </div>
         )}
       </CardContent>
+
+      <PdfViewerDialog
+        url={previewFile?.url || null}
+        title={previewFile?.title || ''}
+        onClose={() => setPreviewFile(null)}
+      />
 
       <Dialog open={isModalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">

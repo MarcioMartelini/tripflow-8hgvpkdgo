@@ -24,6 +24,7 @@ interface Props {
   reserva: Reserva
   onEdit: (r: Reserva) => void
   onDelete: () => void
+  onPreview?: (url: string, title: string) => void
 }
 
 export function ReservaCard({ reserva, onEdit, onDelete }: Props) {
@@ -122,15 +123,25 @@ export function ReservaCard({ reserva, onEdit, onDelete }: Props) {
               <div className="flex flex-wrap gap-2 justify-end">
                 {(Array.isArray(reserva.arquivo) ? reserva.arquivo : [reserva.arquivo]).map(
                   (f, i, arr) => (
-                    <Button key={i} variant="outline" size="sm" asChild className="h-8 text-xs">
-                      <a
-                        href={pb.files.getURL(reserva, f)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <FileText className="h-3 w-3 mr-1" />
-                        PDF {arr.length > 1 ? i + 1 : ''}
-                      </a>
+                    <Button
+                      key={i}
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => {
+                        const url = pb.files.getURL(reserva, f)
+                        if (onPreview) {
+                          onPreview(
+                            url,
+                            `Reserva ${reserva.tipo} - PDF ${arr.length > 1 ? i + 1 : ''}`,
+                          )
+                        } else {
+                          window.open(url, '_blank')
+                        }
+                      }}
+                    >
+                      <FileText className="h-3 w-3 mr-1" />
+                      PDF {arr.length > 1 ? i + 1 : ''}
                     </Button>
                   ),
                 )}
