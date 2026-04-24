@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { NewTripDialog } from './NewTripDialog'
+import { SelectTripDialog } from './SelectTripDialog'
 import pb from '@/lib/pocketbase/client'
 import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
@@ -23,6 +24,7 @@ export default function Layout() {
   const location = useLocation()
   const { toast } = useToast()
   const [unreadAlerts, setUnreadAlerts] = useState(0)
+  const [isSelectTripOpen, setIsSelectTripOpen] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -68,7 +70,11 @@ export default function Layout() {
     { name: 'Dashboard', path: '/' },
     { name: 'Minhas Viagens', path: '/trips' },
     { name: 'Documentos', path: activeTripId ? `/documents/${activeTripId}` : '/documents' },
-    { name: 'Orçamento', path: activeTripId ? `/orcamento/${activeTripId}` : '/trips' },
+    {
+      name: 'Orçamento',
+      path: activeTripId ? `/orcamento/${activeTripId}` : '#',
+      isModal: !activeTripId,
+    },
     { name: 'Alertas', path: '/alerts' },
   ]
 
@@ -86,6 +92,25 @@ export default function Layout() {
                 const isActive =
                   location.pathname === item.path &&
                   !(item.name === 'Orçamento' && item.path === '/trips')
+
+                if (item.isModal) {
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={() => setIsSelectTripOpen(true)}
+                      className={cn(
+                        'text-sm font-medium transition-colors hover:text-primary relative h-full flex items-center gap-1.5 cursor-pointer',
+                        isActive ? 'text-primary' : 'text-slate-500',
+                      )}
+                    >
+                      {item.name}
+                      {isActive && (
+                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
+                      )}
+                    </button>
+                  )
+                }
+
                 return (
                   <Link
                     key={item.name}
@@ -152,6 +177,7 @@ export default function Layout() {
       <main className="flex-1 flex flex-col">
         <Outlet />
       </main>
+      <SelectTripDialog open={isSelectTripOpen} onOpenChange={setIsSelectTripOpen} />
     </div>
   )
 }
