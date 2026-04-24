@@ -11,7 +11,9 @@ import {
   Edit2,
   Trash2,
   CalendarX,
+  FileText,
 } from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
 
 interface TimelineViewProps {
   events: ItinerarioEvent[]
@@ -80,6 +82,22 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
                   <p className="text-sm text-slate-600 bg-slate-50 p-2 rounded mt-2 whitespace-pre-wrap">
                     {event.notas}
                   </p>
+                )}
+                {event.arquivos && event.arquivos.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {event.arquivos.map((arquivo, idx) => (
+                      <a
+                        key={idx}
+                        href={pb.files.getURL(event as any, arquivo)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs transition-colors border border-slate-200"
+                      >
+                        <FileText className="h-3.5 w-3.5 text-red-500" />
+                        <span className="truncate max-w-[150px]">{arquivo}</span>
+                      </a>
+                    ))}
+                  </div>
                 )}
               </div>
               <div className="flex gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity w-full sm:w-auto justify-end border-t sm:border-t-0 pt-3 sm:pt-0">

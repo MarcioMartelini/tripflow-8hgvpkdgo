@@ -2,6 +2,8 @@ import pb from '@/lib/pocketbase/client'
 
 export interface ItinerarioEvent {
   id: string
+  collectionId: string
+  collectionName: string
   viagem_id: string
   data: string
   hora_inicio?: string
@@ -10,6 +12,7 @@ export interface ItinerarioEvent {
   tipo: string
   local?: string
   notas?: string
+  arquivos?: string[]
   expand?: any
 
   // Aliases for backward compatibility in some components
@@ -53,14 +56,14 @@ export const getUpcomingItinerario = async (): Promise<{ items: ItinerarioEvent[
 }
 
 export const createItinerario = async (
-  data: Partial<ItinerarioEvent>,
+  data: Partial<ItinerarioEvent> | FormData,
 ): Promise<ItinerarioEvent> => {
   return await pb.collection('itinerario').create<ItinerarioEvent>(data)
 }
 
 export const updateItinerario = async (
   id: string,
-  data: Partial<ItinerarioEvent>,
+  data: Partial<ItinerarioEvent> | FormData,
 ): Promise<ItinerarioEvent> => {
   return await pb.collection('itinerario').update<ItinerarioEvent>(id, data)
 }

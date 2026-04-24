@@ -40,6 +40,7 @@ export function ActivityModal({
 }: ActivityModalProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [files, setFiles] = useState<File[]>([])
   const [form, setForm] = useState({
     data: '',
     hora_inicio: '',
@@ -73,11 +74,22 @@ export function ActivityModal({
           notas: '',
         })
       }
+      setFiles([]) // Reset files on open
     }
   }, [isOpen, initialData, selectedDate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const invalidFiles = files.filter((f) => f.type !== 'application/pdf')
+    if (invalidFiles.length > 0) {
+      toast({
+        title: 'Formato inválido',
+        description: 'Apenas arquivos PDF são permitidos.',
+        variant: 'destructive',
+      })
+      return
+    }
 
     if (form.hora_fim && form.hora_fim <= form.hora_inicio) {
       toast({
@@ -90,17 +102,25 @@ export function ActivityModal({
 
     setLoading(true)
     try {
-      const payload = {
-        ...form,
-        viagem_id: tripId,
-        data: `${form.data} 12:00:00.000Z`,
-      }
+      const formData = new FormData()
+      formData.append('viagem_id', tripId)
+      formData.append('data', `${form.data} 12:00:00.000Z`)
+      formData.append('hora_inicio', form.hora_inicio)
+      formData.append('hora_fim', form.hora_fim)
+      formData.append('tipo', form.tipo)
+      formData.append('atividade', form.atividade)
+      formData.append('local', form.local)
+      formData.append('notas', form.notas)
+
+      files.forEach((file) => {
+        formData.append('arquivos', file)
+      })
 
       if (initialData) {
-        await updateItinerario(initialData.id, payload)
+        await updateItinerario(initialData.id, formData)
         toast({ title: 'Atividade atualizada com sucesso!' })
       } else {
-        await createItinerario(payload)
+        await createItinerario(formData)
         toast({ title: 'Atividade adicionada com sucesso!' })
       }
       onSaved()
@@ -199,6 +219,22 @@ export function ActivityModal({
               value={form.notas}
               onChange={(e) => setForm({ ...form, notas: e.target.value })}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="arquivos">Anexar Arquivos (PDF)</Label>
+            <Input
+              id="arquivos"
+              type="file"
+              multiple
+              accept="application/pdf"
+              onChange={(e) => setFiles(Array.from(e.target.files || []))}
+            />
+            {initialData?.arquivos && initialData.arquivos.length > 0 && files.length === 0 && (
+              <p className="text-xs text-slate-500 mt-1">
+                {initialData.arquivos.length} arquivo(s) já anexado(s). Selecionar novos substituirá
+                os atuais.
+              </p>
+            )}
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
