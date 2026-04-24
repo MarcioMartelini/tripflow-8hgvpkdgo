@@ -20,6 +20,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { createItinerario, updateItinerario, ItinerarioEvent } from '@/services/itinerario'
 import { format } from 'date-fns'
+import { ActivityComments } from './ActivityComments'
 
 interface ActivityModalProps {
   isOpen: boolean
@@ -387,6 +388,8 @@ export function ActivityModal({
             </Button>
           </div>
         </form>
+
+        {initialData && <ActivityComments atividadeId={initialData.id} tripId={tripId} />}
       </DialogContent>
     </Dialog>
   )

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-24T01:57:21.933Z",
+  "generatedAt": "2026-04-24T02:05:38.577Z",
   "collections": [
     {
       "name": "users",
@@ -980,6 +980,193 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "comentarios",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && usuario_id = @request.auth.id",
+        "view": "@request.auth.id != '' && usuario_id = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && usuario_id = @request.auth.id",
+        "delete": "@request.auth.id != '' && usuario_id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "atividade_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "itinerario"
+        },
+        {
+          "name": "usuario_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "viagem_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "trips"
+        },
+        {
+          "name": "texto",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_comentarios_usuario_id ON comentarios (usuario_id)",
+        "CREATE INDEX idx_comentarios_viagem_id ON comentarios (viagem_id)",
+        "CREATE INDEX idx_comentarios_atividade_id ON comentarios (atividade_id)"
+      ]
+    },
+    {
+      "name": "sincronizacao_offline",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && usuario_id = @request.auth.id",
+        "view": "@request.auth.id != '' && usuario_id = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && usuario_id = @request.auth.id",
+        "delete": "@request.auth.id != '' && usuario_id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "usuario_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "tipo",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["atividade", "despesa", "comentario", "outro"]
+        },
+        {
+          "name": "acao",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["criar", "editar", "deletar"]
+        },
+        {
+          "name": "dados",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sincronizado",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sincronizado_em",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_sinc_offline_usuario_id ON sincronizacao_offline (usuario_id)"]
+    },
+    {
+      "name": "integracao_google_calendar",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && usuario_id = @request.auth.id",
+        "view": "@request.auth.id != '' && usuario_id = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "@request.auth.id != '' && usuario_id = @request.auth.id",
+        "delete": "@request.auth.id != '' && usuario_id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "usuario_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "google_calendar_id",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "token_acesso",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "token_refresh",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "conectado",
+          "type": "bool",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX idx_integracao_gc_usuario_id ON integracao_google_calendar (usuario_id)"
+      ]
     }
   ]
 }
