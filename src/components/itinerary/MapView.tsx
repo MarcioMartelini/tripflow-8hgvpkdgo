@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
-import { ItinerarioEvent } from '@/services/itinerario'
+import { ItinerarioEvent, updateItinerario } from '@/services/itinerario'
 import { Trip } from '@/services/trips'
+import { useToast } from '@/hooks/use-toast'
 import { MapPin, Route, Navigation } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,6 +18,7 @@ interface RouteInfo {
   duration: number // in min
   geometry?: any
   waypoints?: any[]
+  legs?: { distance: number; duration: number }[]
 }
 
 const getIconSvg = (tipo?: string) => {
@@ -40,6 +42,7 @@ const getColor = (tipo?: string) => {
 }
 
 export function MapView({ events, trip, onEditEvent }: MapViewProps) {
+  const { toast } = useToast()
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<any>(null)
   const [loaded, setLoaded] = useState(false)
@@ -102,6 +105,10 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
             distance: data.routes[0].distance / 1000,
             duration: data.routes[0].duration / 60,
             geometry: data.routes[0].geometry,
+            legs: data.routes[0].legs.map((leg: any) => ({
+              distance: leg.distance / 1000,
+              duration: leg.duration / 60,
+            })),
           })
         }
       } catch (err) {
@@ -110,6 +117,35 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
     }
     fetchRoute()
   }, [validEvents])
+
+  const handleApplyOptimization = async () => {
+    if (!optimizedRouteInfo?.waypoints) return
+    const waypoints = [...optimizedRouteInfo.waypoints].sort(
+      (a, b) => a.waypoint_index - b.waypoint_index,
+    )
+    const newOrder = waypoints.map(
+      (wp) =>
+        validEvents.find((e) => e.longitude === wp.location[0] && e.latitude === wp.location[1])!,
+    )
+
+    const times = newOrder
+      .map((e) => e.hora_inicio)
+      .sort((a, b) => (a || '24:00').localeCompare(b || '24:00'))
+
+    try {
+      await Promise.all(
+        newOrder.map((ev, i) => {
+          if (ev.hora_inicio !== times[i]) {
+            return updateItinerario(ev.id, { hora_inicio: times[i] })
+          }
+        }),
+      )
+      toast({ title: 'Rota otimizada aplicada com sucesso!' })
+      setShowOptimized(false)
+    } catch (e) {
+      toast({ title: 'Erro ao aplicar otimização', variant: 'destructive' })
+    }
+  }
 
   // Optimize Route
   const handleOptimize = async () => {
@@ -127,6 +163,10 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
           duration: data.trips[0].duration / 60,
           geometry: data.trips[0].geometry,
           waypoints: data.waypoints,
+          legs: data.trips[0].legs.map((leg: any) => ({
+            distance: leg.distance / 1000,
+            duration: leg.duration / 60,
+          })),
         })
         setShowOptimized(true)
       }
@@ -315,13 +355,21 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
                             Você economiza {savings.toFixed(1)} km de deslocamento!
                           </p>
                         )}
-                        <Button
-                          onClick={() => setShowOptimized(false)}
-                          variant="outline"
-                          className="w-full"
-                        >
-                          Ver Rota Original
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={handleApplyOptimization}
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                          >
+                            Aplicar
+                          </Button>
+                          <Button
+                            onClick={() => setShowOptimized(false)}
+                            variant="outline"
+                            className="w-full"
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -344,27 +392,38 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 overflow-y-auto max-h-[300px] pr-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
-            {orderedEvents.map((ev, i) => (
-              <div key={ev.id} className="flex gap-3 items-start group">
-                <div className="flex flex-col items-center mt-1">
-                  <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
-                    style={{ backgroundColor: getColor(ev.tipo) }}
-                  >
-                    {i + 1}
+            {orderedEvents.map((ev, i) => {
+              const leg = activeRoute?.legs?.[i]
+              return (
+                <div key={ev.id} className="flex gap-3 items-start group">
+                  <div className="flex flex-col items-center mt-1 min-h-[40px]">
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm shrink-0"
+                      style={{ backgroundColor: getColor(ev.tipo) }}
+                    >
+                      {i + 1}
+                    </div>
+                    {i < orderedEvents.length - 1 && (
+                      <div className="w-0.5 flex-1 bg-slate-200 my-1 group-last:hidden min-h-[30px]"></div>
+                    )}
                   </div>
-                  {i < orderedEvents.length - 1 && (
-                    <div className="w-0.5 h-full bg-slate-200 my-1 group-last:hidden min-h-[20px]"></div>
-                  )}
+                  <div className="flex-1 pb-4">
+                    <p className="font-medium text-sm text-slate-900 leading-tight">
+                      {ev.atividade}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {ev.hora_inicio || 'Sem horário'} • {ev.local || 'Local não definido'}
+                    </p>
+                    {leg && i < orderedEvents.length - 1 && (
+                      <div className="mt-3 flex items-center gap-1 text-[10px] font-medium text-slate-400 bg-slate-50 w-fit px-2 py-0.5 rounded border">
+                        <Navigation className="w-3 h-3 text-slate-400" />
+                        {leg.distance.toFixed(1)} km • {Math.round(leg.duration)} min
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 pb-4">
-                  <p className="font-medium text-sm text-slate-900 leading-tight">{ev.atividade}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {ev.hora_inicio || 'Sem horário'} • {ev.local || 'Local não definido'}
-                  </p>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </CardContent>
         </Card>
       </div>

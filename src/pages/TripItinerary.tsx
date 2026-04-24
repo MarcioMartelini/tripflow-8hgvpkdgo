@@ -210,7 +210,7 @@ export default function TripItinerary() {
               className="flex-1 sm:flex-none"
               onClick={() => setViewMode('daily')}
             >
-              <List className="w-4 h-4 mr-2" /> Diário
+              <List className="w-4 h-4 mr-2" /> Lista
             </Button>
             <Button
               variant={viewMode === 'weekly' ? 'default' : 'ghost'}
