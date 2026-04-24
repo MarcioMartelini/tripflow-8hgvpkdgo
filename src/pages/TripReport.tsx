@@ -37,7 +37,6 @@ import {
   AlertCircle,
   CheckCircle2,
   Info,
-  Plane,
 } from 'lucide-react'
 import { format, differenceInDays, isBefore, addDays, parseISO, isValid } from 'date-fns'
 import { useAuth } from '@/hooks/use-auth'
@@ -244,20 +243,9 @@ export default function TripReport() {
         className="bg-white p-6 sm:p-10 rounded-xl shadow-sm border border-slate-200 max-w-full space-y-10 overflow-hidden text-slate-900"
       >
         {/* PDF Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 pb-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2.5 rounded-xl flex items-center justify-center">
-              <Plane className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">TripFlow</h1>
-              <p className="text-sm text-slate-500 font-medium">Relatório de Viagem</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <h2 className="text-xl font-bold text-slate-800">{trip.title}</h2>
-            <p className="text-sm text-slate-500">{trip.destination}</p>
-          </div>
+        <div className="border-b border-slate-200 pb-6">
+          <h1 className="text-2xl font-bold text-slate-800">{trip.title}</h1>
+          <p className="text-sm text-slate-500">{trip.destination}</p>
         </div>
 
         {/* Section 1: Summary Cards */}
