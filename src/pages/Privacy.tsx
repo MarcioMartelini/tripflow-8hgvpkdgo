@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
+import { useRealtime } from '@/hooks/use-realtime'
 import pb from '@/lib/pocketbase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -87,6 +88,9 @@ export default function Privacy() {
   useEffect(() => {
     fetchData()
   }, [])
+
+  useRealtime('compartilhamento_documentos', fetchData)
+  useRealtime('logs_auditoria', fetchData)
 
   const handleRevoke = async (id: string) => {
     try {

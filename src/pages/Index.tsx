@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react'
 import { getTrips, type Trip } from '@/services/trips'
 import { getUpcomingItinerario, type ItinerarioEvent } from '@/services/itinerario'
 import { getDocumentosCount } from '@/services/documentos'
+import {
+  getAllDespesas,
+  getAllOrcamentos,
+  type Despesa,
+  type OrcamentoPlanejado,
+} from '@/services/finances'
+import { getAlertas, type Alerta } from '@/services/alertas'
+import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import {
   Card,
@@ -38,21 +46,39 @@ export default function Index() {
   const [trips, setTrips] = useState<Trip[]>([])
   const [events, setEvents] = useState<ItinerarioEvent[]>([])
   const [docCount, setDocCount] = useState(0)
+  const [totalDespesas, setTotalDespesas] = useState(0)
+  const [totalOrcamentoDetalhado, setTotalOrcamentoDetalhado] = useState(0)
+  const [recentAlerts, setRecentAlerts] = useState<Alerta[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
 
   const loadData = async () => {
     try {
       setLoading(true)
       setError(null)
-      const [tripsData, eventsData, docs] = await Promise.all([
-        getTrips(),
-        getUpcomingItinerario(),
-        getDocumentosCount(),
-      ])
+
+      const userId = user?.id || ''
+      const [tripsData, eventsData, docs, despesasData, orcamentosData, alertasData] =
+        await Promise.all([
+          getTrips(),
+          getUpcomingItinerario(),
+          getDocumentosCount(),
+          getAllDespesas(),
+          getAllOrcamentos(),
+          userId ? getAlertas(userId) : Promise.resolve([]),
+        ])
       setTrips(tripsData)
       setEvents(eventsData.items)
       setDocCount(docs)
+
+      const sumDespesas = despesasData.reduce((acc, d) => acc + (d.valor || 0), 0)
+      setTotalDespesas(sumDespesas)
+
+      const sumOrcamentos = orcamentosData.reduce((acc, o) => acc + (o.valor_planejado || 0), 0)
+      setTotalOrcamentoDetalhado(sumOrcamentos)
+
+      setRecentAlerts(alertasData.filter((a) => !a.lido).slice(0, 3))
     } catch (e: any) {
       console.error(e)
       setError('Ocorreu um erro ao carregar seus dados. Por favor, tente novamente.')
@@ -62,11 +88,16 @@ export default function Index() {
   }
 
   useEffect(() => {
-    loadData()
-  }, [])
+    if (user?.id) {
+      loadData()
+    }
+  }, [user?.id])
 
   useRealtime('trips', () => loadData())
   useRealtime('itinerario', () => loadData())
+  useRealtime('despesas', () => loadData())
+  useRealtime('orcamento_planejado', () => loadData())
+  useRealtime('alertas', () => loadData())
 
   const activeTrips = trips
     .filter((t) => t.status === 'ongoing' || t.status === 'planned')
@@ -81,10 +112,13 @@ export default function Index() {
     })
     .slice(0, 3)
 
-  const totalBudget = trips.reduce(
+  const totalBudgetFromTrips = trips.reduce(
     (acc, trip) => acc + (trip.orcamento_planejado || trip.budget_total || 0),
     0,
   )
+
+  const finalTotalBudget =
+    totalOrcamentoDetalhado > 0 ? totalOrcamentoDetalhado : totalBudgetFromTrips
 
   const totalDocuments = docCount
 
@@ -168,17 +202,26 @@ export default function Index() {
             <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-sm font-medium text-slate-500">
-                  Orçamento Total
+                  Gastos vs Orçamento
                 </CardTitle>
                 <DollarSign className="h-4 w-4 text-slate-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-slate-900">
+                <div className="text-2xl font-bold text-slate-900">
                   {new Intl.NumberFormat('pt-BR', {
                     style: 'currency',
                     currency: 'BRL',
                     maximumFractionDigits: 0,
-                  }).format(totalBudget)}
+                  }).format(totalDespesas)}
+                </div>
+                <div className="text-xs text-slate-500 mt-1">
+                  de{' '}
+                  {new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL',
+                    maximumFractionDigits: 0,
+                  }).format(finalTotalBudget)}{' '}
+                  planejado
                 </div>
               </CardContent>
             </Card>
@@ -301,8 +344,34 @@ export default function Index() {
           </div>
         </section>
 
-        {/* Upcoming Events */}
+        {/* Alerts & Upcoming Events */}
         <section className="space-y-6">
+          {recentAlerts.length > 0 && (
+            <div className="space-y-4 mb-8">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-slate-900">Alertas</h2>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/alerts">Ver todos</Link>
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {recentAlerts.map((alerta) => (
+                  <div
+                    key={alerta.id}
+                    className="bg-orange-50 border-l-4 border-orange-500 p-3 rounded-r-lg"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-orange-600 shrink-0" />
+                      <p className="text-sm font-medium text-orange-800 line-clamp-2">
+                        {alerta.mensagem}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <h2 className="text-2xl font-bold text-slate-900">Próximos Eventos</h2>
 
           <Card className="border-slate-200/60 shadow-sm overflow-hidden">

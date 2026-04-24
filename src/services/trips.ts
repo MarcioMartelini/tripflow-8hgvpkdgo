@@ -20,12 +20,35 @@ export interface Trip {
   owner_id: string
   latitude?: number
   longitude?: number
+  created?: string
 }
 
 export const getTrips = async (): Promise<Trip[]> => {
-  return await pb.collection('trips').getFullList<Trip>({
+  const user = pb.authStore.record
+  if (!user) return []
+
+  const ownedTrips = await pb.collection('trips').getFullList<Trip>({
     sort: '-created',
   })
+
+  try {
+    const travelerRecords = await pb.collection('viajantes').getFullList({
+      filter: `usuario_id = "${user.id}"`,
+      expand: 'viagem_id',
+    })
+
+    const travelerTrips = travelerRecords
+      .map((record) => record.expand?.viagem_id as Trip)
+      .filter((trip) => trip && !ownedTrips.find((t) => t.id === trip.id))
+
+    return [...ownedTrips, ...travelerTrips].sort((a, b) => {
+      const dateA = a.created || ''
+      const dateB = b.created || ''
+      return dateB.localeCompare(dateA)
+    })
+  } catch (e) {
+    return ownedTrips
+  }
 }
 
 export const getTrip = async (id: string): Promise<Trip> => {

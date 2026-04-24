@@ -42,6 +42,51 @@ export const getOrcamentos = async (tripId: string): Promise<OrcamentoPlanejado[
   })
 }
 
+export const getAllDespesas = async (): Promise<Despesa[]> => {
+  const user = pb.authStore.record
+  if (!user) return []
+
+  let records: Despesa[] = []
+  if (navigator.onLine) {
+    try {
+      records = await pb.collection('despesas').getFullList<Despesa>({
+        filter: `usuario_id = "${user.id}"`,
+      })
+    } catch {
+      /* intentionally ignored */
+    }
+  }
+
+  const offlineOps = await getOfflineOps('despesas_offline')
+  const offlineCreates = offlineOps.filter((o) => o.action === 'create' && o.userId === user.id)
+  const offlineUpdates = offlineOps.filter((o) => o.action === 'update' && o.userId === user.id)
+  const offlineDeletes = offlineOps.filter((o) => o.action === 'delete' && o.userId === user.id)
+  const deletesSet = new Set(offlineDeletes.map((o) => o.originalId))
+
+  records = records.filter((r) => !deletesSet.has(r.id))
+  records = records.map((r) => {
+    const update = offlineUpdates.find((o) => o.originalId === r.id)
+    return update ? { ...r, ...update.payload } : r
+  })
+
+  offlineCreates.forEach((op) => {
+    records.push({ id: op.localId, ...op.payload } as Despesa)
+  })
+
+  return records
+}
+
+export const getAllOrcamentos = async (): Promise<OrcamentoPlanejado[]> => {
+  if (navigator.onLine) {
+    try {
+      return await pb.collection('orcamento_planejado').getFullList<OrcamentoPlanejado>()
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
 export const getDespesas = async (tripId: string): Promise<Despesa[]> => {
   let records: Despesa[] = []
   if (navigator.onLine) {
