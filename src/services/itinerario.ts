@@ -33,6 +33,8 @@ export interface ItinerarioEvent {
   moeda?: string
   categoria?: string
   categoria_outro_descricao?: string
+  latitude?: number
+  longitude?: number
   expand?: any
 
   // Aliases for backward compatibility in some components

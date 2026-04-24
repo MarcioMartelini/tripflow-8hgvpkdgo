@@ -20,7 +20,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { ArrowLeft, Plus, LayoutGrid, List, AlertTriangle, Printer } from 'lucide-react'
+import {
+  ArrowLeft,
+  Plus,
+  LayoutGrid,
+  List,
+  AlertTriangle,
+  Printer,
+  Map as MapIcon,
+} from 'lucide-react'
 import { format, parseISO, isSameDay, eachDayOfInterval, addDays, startOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { ptBR } from 'date-fns/locale'
@@ -28,6 +36,7 @@ import { ptBR } from 'date-fns/locale'
 import { ActivityModal } from '@/components/itinerary/ActivityModal'
 import { TimelineView } from '@/components/itinerary/TimelineView'
 import { WeeklyGrid } from '@/components/itinerary/WeeklyGrid'
+import { MapView } from '@/components/itinerary/MapView'
 
 export default function TripItinerary() {
   const { id } = useParams<{ id: string }>()
@@ -39,7 +48,7 @@ export default function TripItinerary() {
   const [error, setError] = useState(false)
 
   const [selectedDate, setSelectedDate] = useState<Date>(startOfDay(new Date()))
-  const [viewMode, setViewMode] = useState<'daily' | 'weekly'>('daily')
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'map'>('daily')
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
@@ -211,13 +220,26 @@ export default function TripItinerary() {
             >
               <LayoutGrid className="w-4 h-4 mr-2" /> Semanal
             </Button>
+            <Button
+              variant={viewMode === 'map' ? 'default' : 'ghost'}
+              size="sm"
+              className="flex-1 sm:flex-none"
+              onClick={() => setViewMode('map')}
+            >
+              <MapIcon className="w-4 h-4 mr-2" /> Mapa
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8 flex-1">
         {/* Sidebar Desktop Calendar */}
-        <div className="hidden lg:block w-[280px] shrink-0 print-hidden">
+        <div
+          className={cn(
+            'hidden lg:block w-[280px] shrink-0 print-hidden',
+            viewMode === 'map' && 'hidden lg:hidden',
+          )}
+        >
           <div className="bg-white p-3 rounded-lg border shadow-sm sticky top-6">
             <Calendar
               mode="single"
@@ -232,7 +254,7 @@ export default function TripItinerary() {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col gap-6">
           {/* Mobile/Tablet Date Selector */}
-          <div className="lg:hidden print-hidden">
+          <div className={cn('lg:hidden print-hidden', viewMode === 'map' && 'hidden')}>
             <ScrollArea className="w-full whitespace-nowrap bg-white border rounded-lg shadow-sm">
               <div className="flex w-max space-x-1 p-2">
                 {allTripDays.map((day) => (
@@ -254,13 +276,24 @@ export default function TripItinerary() {
           </div>
 
           {/* Action Bar */}
-          <div className="flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm">
+          <div
+            className={cn(
+              'flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm',
+              viewMode === 'map' && 'mb-0',
+            )}
+          >
             <div>
-              <h2 className="text-xl font-bold text-slate-800 capitalize">
-                {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
-              </h2>
-              {viewMode === 'weekly' && (
-                <p className="text-sm text-slate-500">Exibindo próximos 7 dias</p>
+              {viewMode === 'map' ? (
+                <h2 className="text-xl font-bold text-slate-800">Visualização no Mapa</h2>
+              ) : (
+                <>
+                  <h2 className="text-xl font-bold text-slate-800 capitalize">
+                    {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+                  </h2>
+                  {viewMode === 'weekly' && (
+                    <p className="text-sm text-slate-500">Exibindo próximos 7 dias</p>
+                  )}
+                </>
               )}
             </div>
             <Button className="print-hidden" onClick={() => setIsAddModalOpen(true)}>
@@ -271,15 +304,16 @@ export default function TripItinerary() {
           </div>
 
           {/* Views */}
-          <div className="flex-1 bg-white p-4 sm:p-6 rounded-lg border shadow-sm print-hidden">
-            {viewMode === 'daily' ? (
+          <div className="flex-1 bg-white p-4 sm:p-6 rounded-lg border shadow-sm print-hidden z-0">
+            {viewMode === 'daily' && (
               <TimelineView
                 events={dailyEvents}
                 onEdit={setEventToEdit}
                 onDelete={setEventToDelete}
                 onAdd={() => setIsAddModalOpen(true)}
               />
-            ) : (
+            )}
+            {viewMode === 'weekly' && (
               <WeeklyGrid
                 days={weeklyDays}
                 events={events}
@@ -288,6 +322,9 @@ export default function TripItinerary() {
                   setViewMode('daily')
                 }}
               />
+            )}
+            {viewMode === 'map' && (
+              <MapView events={events} trip={trip} onEditEvent={setEventToEdit} />
             )}
           </div>
 

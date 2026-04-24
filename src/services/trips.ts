@@ -18,6 +18,8 @@ export interface Trip {
   moeda?: string
   descricao?: string
   owner_id: string
+  latitude?: number
+  longitude?: number
 }
 
 export const getTrips = async (): Promise<Trip[]> => {

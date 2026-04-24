@@ -57,6 +57,8 @@ export function ActivityModal({
     moeda: 'BRL',
     categoria: 'atividade',
     categoria_outro_descricao: '',
+    latitude: '',
+    longitude: '',
   })
 
   useEffect(() => {
@@ -74,6 +76,8 @@ export function ActivityModal({
           moeda: initialData.moeda || 'BRL',
           categoria: initialData.categoria || 'atividade',
           categoria_outro_descricao: initialData.categoria_outro_descricao || '',
+          latitude: initialData.latitude?.toString() || '',
+          longitude: initialData.longitude?.toString() || '',
         })
         setExistingFiles(
           initialData.arquivos
@@ -95,6 +99,8 @@ export function ActivityModal({
           moeda: 'BRL',
           categoria: 'atividade',
           categoria_outro_descricao: '',
+          latitude: '',
+          longitude: '',
         })
         setExistingFiles([])
       }
@@ -142,6 +148,8 @@ export function ActivityModal({
         'categoria_outro_descricao',
         form.categoria === 'outro' ? form.categoria_outro_descricao : '',
       )
+      formData.append('latitude', form.latitude || '')
+      formData.append('longitude', form.longitude || '')
 
       newFiles.forEach((file) => {
         formData.append('arquivos', file)
@@ -277,6 +285,30 @@ export function ActivityModal({
               value={form.local}
               onChange={(e) => setForm({ ...form, local: e.target.value })}
             />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="latitude">Latitude (Opcional)</Label>
+              <Input
+                id="latitude"
+                type="number"
+                step="any"
+                placeholder="Ex: -22.9068"
+                value={form.latitude}
+                onChange={(e) => setForm({ ...form, latitude: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="longitude">Longitude (Opcional)</Label>
+              <Input
+                id="longitude"
+                type="number"
+                step="any"
+                placeholder="Ex: -43.1729"
+                value={form.longitude}
+                onChange={(e) => setForm({ ...form, longitude: e.target.value })}
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

@@ -49,6 +49,8 @@ export function TripFormModal({ children, trip }: TripFormModalProps) {
     budget_total: 0,
     moeda: 'BRL',
     descricao: '',
+    latitude: '',
+    longitude: '',
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -63,6 +65,8 @@ export function TripFormModal({ children, trip }: TripFormModalProps) {
         budget_total: trip?.budget_total || 0,
         moeda: trip?.moeda || 'BRL',
         descricao: trip?.descricao || '',
+        latitude: trip?.latitude?.toString() || '',
+        longitude: trip?.longitude?.toString() || '',
       })
       setErrors({})
     }
@@ -108,6 +112,8 @@ export function TripFormModal({ children, trip }: TripFormModalProps) {
         budget_total: Number(formData.budget_total),
         orcamento_planejado: Number(formData.budget_total),
         status: trip?.status || 'planned',
+        latitude: formData.latitude ? Number(formData.latitude) : null,
+        longitude: formData.longitude ? Number(formData.longitude) : null,
       }
 
       if (trip) {
@@ -225,6 +231,33 @@ export function TripFormModal({ children, trip }: TripFormModalProps) {
                   <SelectItem value="AUD">AUD</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="latitude">Latitude do Destino</Label>
+              <Input
+                id="latitude"
+                name="latitude"
+                type="number"
+                step="any"
+                value={formData.latitude}
+                onChange={handleChange}
+                placeholder="Ex: -22.9068"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="longitude">Longitude do Destino</Label>
+              <Input
+                id="longitude"
+                name="longitude"
+                type="number"
+                step="any"
+                value={formData.longitude}
+                onChange={handleChange}
+                placeholder="Ex: -43.1729"
+              />
             </div>
           </div>
 

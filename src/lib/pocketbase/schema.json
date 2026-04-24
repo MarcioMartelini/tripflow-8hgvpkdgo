@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-24T02:42:33.417Z",
+  "generatedAt": "2026-04-24T02:48:26.892Z",
   "collections": [
     {
       "name": "users",
@@ -170,6 +170,18 @@
         {
           "name": "descricao",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "latitude",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "longitude",
+          "type": "number",
           "required": false,
           "system": false
         }
@@ -406,6 +418,18 @@
         {
           "name": "categoria_outro_descricao",
           "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "latitude",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "longitude",
+          "type": "number",
           "required": false,
           "system": false
         }
