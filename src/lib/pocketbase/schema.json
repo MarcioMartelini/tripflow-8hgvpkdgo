@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-24T02:23:20.282Z",
+  "generatedAt": "2026-04-24T02:29:04.179Z",
   "collections": [
     {
       "name": "users",
@@ -169,6 +169,12 @@
         },
         {
           "name": "descricao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "google_calendar_id",
           "type": "text",
           "required": false,
           "system": false
@@ -405,6 +411,12 @@
         },
         {
           "name": "categoria_outro_descricao",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "google_event_id",
           "type": "text",
           "required": false,
           "system": false

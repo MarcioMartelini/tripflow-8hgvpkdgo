@@ -20,7 +20,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { ArrowLeft, Plus, LayoutGrid, List, AlertTriangle, Printer } from 'lucide-react'
+import {
+  ArrowLeft,
+  Plus,
+  LayoutGrid,
+  List,
+  AlertTriangle,
+  Printer,
+  Share2,
+  RefreshCw,
+} from 'lucide-react'
 import { format, parseISO, isSameDay, eachDayOfInterval, addDays, startOfDay } from 'date-fns'
 import {
   getIntegracaoGoogleCalendar,
@@ -28,6 +37,7 @@ import {
   type IntegracaoGoogleCalendar,
 } from '@/services/integracao_google_calendar'
 import pb from '@/lib/pocketbase/client'
+import { cn } from '@/lib/utils'
 
 const GoogleCalendarIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -64,6 +74,7 @@ export default function TripItinerary() {
   const [googleIntegration, setGoogleIntegration] = useState<IntegracaoGoogleCalendar | null>(null)
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false)
   const [isDisconnectDialogOpen, setIsDisconnectDialogOpen] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -71,18 +82,45 @@ export default function TripItinerary() {
     }
   }, [user])
 
+  const handleSyncGCal = async () => {
+    if (!trip) return
+    setIsSyncing(true)
+    try {
+      await pb.send(`/backend/v1/trips/${trip.id}/sync-gcal`, { method: 'POST' })
+      toast({ title: 'Calendário sincronizado com sucesso!' })
+      loadData()
+    } catch (err: any) {
+      toast({ title: 'Erro ao sincronizar', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
+  const handleShareCalendar = () => {
+    const calendarId = (trip as any)?.google_calendar_id
+    if (!calendarId) return
+    const url = `https://calendar.google.com/calendar/u/0/r?cid=${calendarId}`
+    navigator.clipboard.writeText(url)
+    toast({ title: 'Link do calendário copiado!' })
+  }
+
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.data === 'google-calendar-connected') {
         toast({ title: 'Google Calendar conectado com sucesso!' })
         if (user) {
-          getIntegracaoGoogleCalendar(user.id).then(setGoogleIntegration)
+          getIntegracaoGoogleCalendar(user.id).then((integ) => {
+            setGoogleIntegration(integ)
+            if (trip && !(trip as any).google_calendar_id) {
+              handleSyncGCal()
+            }
+          })
         }
       }
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [user, toast])
+  }, [user, toast, trip])
 
   const handleConnectGoogle = async () => {
     try {
@@ -258,13 +296,26 @@ export default function TripItinerary() {
         </Button>
         <div className="flex flex-wrap gap-2 items-center">
           {googleIntegration?.conectado ? (
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => setIsDisconnectDialogOpen(true)}
-            >
-              <GoogleCalendarIcon className="w-4 h-4 mr-2" />
-              Desconectar Google Calendar
-            </Button>
+            <>
+              {!(trip as any).google_calendar_id ? (
+                <Button variant="outline" onClick={handleSyncGCal} disabled={isSyncing}>
+                  <RefreshCw className={cn('w-4 h-4 mr-2', isSyncing && 'animate-spin')} />
+                  Sincronizar com Google
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={handleShareCalendar}>
+                  <Share2 className="w-4 h-4 mr-2" />
+                  Compartilhar Calendário
+                </Button>
+              )}
+              <Button
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => setIsDisconnectDialogOpen(true)}
+              >
+                <GoogleCalendarIcon className="w-4 h-4 mr-2" />
+                Desconectar Google Calendar
+              </Button>
+            </>
           ) : (
             <Button
               variant="secondary"

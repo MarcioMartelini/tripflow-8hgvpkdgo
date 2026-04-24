@@ -14,6 +14,7 @@ import {
   Trash2,
   CalendarX,
   FileText,
+  CalendarCheck,
 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { cn } from '@/lib/utils'
@@ -99,6 +100,12 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
                       <span className="text-xs text-slate-500 capitalize px-2 py-0.5 bg-slate-50 border rounded">
                         {event.tipo}
                       </span>
+                      {(event as any).google_event_id && (
+                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 border border-blue-100 rounded flex items-center gap-1">
+                          <CalendarCheck className="w-3 h-3" />
+                          Sincronizado
+                        </span>
+                      )}
                     </div>
                     <h4 className="text-lg font-bold text-slate-900">{event.atividade}</h4>
                     {event.local && (

@@ -39,7 +39,15 @@ export function WeeklyGrid({ days, events, onDayClick }: WeeklyGridProps) {
                       key={event.id}
                       className="text-xs p-1.5 bg-slate-100 rounded truncate flex flex-col gap-0.5"
                     >
-                      <span className="font-semibold text-primary">{event.hora_inicio}</span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-primary">{event.hora_inicio}</span>
+                        {(event as any).google_event_id && (
+                          <div
+                            className="w-1.5 h-1.5 rounded-full bg-blue-500"
+                            title="Sincronizado com Google"
+                          />
+                        )}
+                      </div>
                       <span className="truncate" title={event.atividade}>
                         {event.atividade}
                       </span>
