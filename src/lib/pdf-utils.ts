@@ -79,6 +79,9 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
     el.style.display = 'none'
   })
 
+  const originalScrollY = window.scrollY
+  window.scrollTo(0, 0)
+
   await new Promise((resolve) => setTimeout(resolve, 500))
 
   const canvas = await window.html2canvas(element, {
@@ -86,7 +89,11 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
     useCORS: true,
     logging: false,
     backgroundColor: '#ffffff',
+    scrollY: 0,
+    windowWidth: 1024,
   })
+
+  window.scrollTo(0, originalScrollY)
 
   element.style.width = originalWidth
   element.style.maxWidth = originalMaxWidth
@@ -101,7 +108,7 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
     el.style.display = originalDisplays[index]
   })
 
-  const imgData = canvas.toDataURL('image/png')
+  const imgData = canvas.toDataURL('image/jpeg', 1.0)
   const { jsPDF } = window.jspdf
 
   const pdf = new jsPDF({
@@ -117,25 +124,25 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
   let heightLeft = pdfHeight
   let position = 0
 
-  const logoWidth = 40
+  const logoWidth = 35
   const logoHeight = logoData.height ? (logoData.height / logoData.width) * logoWidth : 15
 
   const addHeader = () => {
     if (logoData.base64) {
       pdf.setFillColor(255, 255, 255)
-      pdf.rect(5, 5, logoWidth + 4, logoHeight + 4, 'F')
-      pdf.addImage(logoData.base64, 'PNG', 7, 7, logoWidth, logoHeight)
+      pdf.rect(4, 4, logoWidth + 2, logoHeight + 2, 'F')
+      pdf.addImage(logoData.base64, 'PNG', 5, 5, logoWidth, logoHeight)
     }
   }
 
-  pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight)
+  pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight)
   addHeader()
   heightLeft -= pageHeight
 
   while (heightLeft > 0) {
-    position = heightLeft - pdfHeight
+    position -= pageHeight
     pdf.addPage()
-    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight)
+    pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight)
     addHeader()
     heightLeft -= pageHeight
   }

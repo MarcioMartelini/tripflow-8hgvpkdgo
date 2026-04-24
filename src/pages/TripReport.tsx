@@ -163,7 +163,7 @@ export default function TripReport() {
     try {
       setIsGenerating(true)
       const { generatePDF } = await import('@/lib/pdf-utils')
-      await generatePDF('pdf-content', `Relatorio_${trip?.title}`)
+      await generatePDF('pdf-content', `Relatorio_Viagem_${trip?.title || 'Resumo'}`)
       toast({
         title: 'Sucesso',
         description: 'Relatório gerado com sucesso!',

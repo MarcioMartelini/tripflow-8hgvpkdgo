@@ -54,7 +54,7 @@ export default function TripDetails() {
     try {
       setIsGeneratingPDF(true)
       const { generatePDF } = await import('@/lib/pdf-utils')
-      await generatePDF('pdf-content', `Detalhes_${trip?.title || 'Viagem'}`)
+      await generatePDF('pdf-content', `Relatorio_Viagem_${trip?.title || 'Detalhes'}`)
       toast({ title: 'PDF gerado com sucesso!' })
     } catch (err) {
       toast({ title: 'Erro ao gerar PDF', variant: 'destructive' })
