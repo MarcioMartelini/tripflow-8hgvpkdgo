@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Documento, getDocumentUrl } from '@/services/documentos'
 import { format, parseISO, differenceInDays, isValid } from 'date-fns'
 import { PdfViewerDialog } from '@/components/PdfViewerDialog'
+import { Link } from 'react-router-dom'
 import {
   FileText,
   Trash2,
@@ -82,13 +83,21 @@ export function DocumentCard({ doc, onEdit, onDelete }: DocumentCardProps) {
             </Badge>
           )}
           <div className="flex justify-end gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setPreviewUrl(getDocumentUrl(doc))}
-            >
-              <Eye className="h-4 w-4 mr-2" /> Ver Arquivo
-            </Button>
+            {doc.iv ? (
+              <Button variant="secondary" size="sm" asChild>
+                <Link to={`/documents/${doc.viagem_id}`}>
+                  <Shield className="h-4 w-4 mr-2" /> Cofre
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPreviewUrl(getDocumentUrl(doc))}
+              >
+                <Eye className="h-4 w-4 mr-2" /> Ver Arquivo
+              </Button>
+            )}
             <Button variant="ghost" size="sm" onClick={() => onEdit(doc)}>
               <Edit className="h-4 w-4" />
             </Button>

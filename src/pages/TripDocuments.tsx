@@ -11,7 +11,13 @@ import { getTrip, Trip } from '@/services/trips'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { useEncryption } from '@/hooks/use-encryption'
-import { encryptFile, decryptFile, encryptData, decryptData } from '@/lib/crypto'
+import {
+  encryptFile,
+  decryptFile,
+  encryptData,
+  decryptData,
+  base64ToArrayBuffer,
+} from '@/lib/crypto'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -129,6 +135,7 @@ export default function TripDocuments() {
   const [filter, setFilter] = useState('todos')
 
   const [viewDoc, setViewDoc] = useState<Documento | null>(null)
+  const [viewError, setViewError] = useState<string | null>(null)
   const [deleteDoc, setDeleteDoc] = useState<Documento | null>(null)
 
   const [openUpload, setOpenUpload] = useState(false)
@@ -214,32 +221,113 @@ export default function TripDocuments() {
     decryptNames()
   }, [docs, encryptionKey])
 
+  const processDocument = async (doc: Documento): Promise<Blob> => {
+    if (!encryptionKey) {
+      throw new Error('NO_KEY')
+    }
+    const url = getDocumentUrl(doc)
+    const res = await fetch(url)
+    const buffer = await res.arrayBuffer()
+
+    if (!doc.iv) {
+      return new Blob([buffer], { type: 'application/pdf' })
+    }
+
+    const data = new Uint8Array(buffer)
+    const fileIv = data.slice(0, 12)
+    const expectedIv = base64ToArrayBuffer(doc.iv)
+
+    if (fileIv.length !== expectedIv.length) {
+      throw new Error('IV_MISMATCH')
+    }
+    for (let i = 0; i < fileIv.length; i++) {
+      if (fileIv[i] !== expectedIv[i]) {
+        throw new Error('IV_MISMATCH')
+      }
+    }
+
+    try {
+      return await decryptFile(encryptionKey, buffer)
+    } catch (e: any) {
+      if (e.name === 'OperationError') {
+        throw new Error('TAMPERED')
+      }
+      throw new Error('DECRYPT_FAIL')
+    }
+  }
+
   // Decrypt file blob for viewing
   useEffect(() => {
-    if (viewDoc && encryptionKey) {
+    let objectUrl: string | null = null
+
+    if (viewDoc) {
+      if (!encryptionKey) {
+        setViewError('Sessão expirou. Faça login novamente')
+        return
+      }
       setDecryptedUrl(null)
+      setViewError(null)
+
       const fetchAndDecrypt = async () => {
         try {
-          const url = getDocumentUrl(viewDoc)
-          const res = await fetch(url)
-          const buffer = await res.arrayBuffer()
-          if (viewDoc.iv) {
-            const blob = await decryptFile(encryptionKey, buffer)
-            setDecryptedUrl(URL.createObjectURL(blob))
+          const blob = await processDocument(viewDoc)
+          objectUrl = URL.createObjectURL(blob)
+          setDecryptedUrl(objectUrl)
+        } catch (e: any) {
+          if (e.message === 'NO_KEY') {
+            setViewError('Sessão expirou. Faça login novamente')
+          } else if (e.message === 'IV_MISMATCH') {
+            setViewError('Arquivo foi alterado. Não é seguro abrir')
+          } else if (e.message === 'TAMPERED') {
+            setViewError('Arquivo corrompido ou alterado')
           } else {
-            // Legacy unencrypted documents
-            setDecryptedUrl(URL.createObjectURL(new Blob([buffer], { type: 'application/pdf' })))
+            setViewError('Arquivo não pode ser descriptografado')
           }
-        } catch (e) {
-          toast({ title: 'Erro ao descriptografar documento', variant: 'destructive' })
         }
       }
       fetchAndDecrypt()
     }
     return () => {
-      if (decryptedUrl) URL.revokeObjectURL(decryptedUrl)
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl)
+      }
     }
   }, [viewDoc, encryptionKey])
+
+  const handleDownload = async () => {
+    if (!viewDoc) return
+    toast({
+      title: 'Preparando download...',
+      description: 'Descriptografando arquivo de forma segura.',
+    })
+    try {
+      const blob = await processDocument(viewDoc)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = decryptedNames[viewDoc.id] || viewDoc.nome_arquivo
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      toast({
+        title: 'Download seguro concluído',
+        description:
+          'Atenção: O arquivo salvo no seu dispositivo agora está fora do controle seguro do aplicativo.',
+      })
+    } catch (e: any) {
+      if (e.message === 'NO_KEY') {
+        toast({ title: 'Sessão expirou. Faça login novamente', variant: 'destructive' })
+      } else if (e.message === 'IV_MISMATCH') {
+        toast({ title: 'Arquivo foi alterado. Não é seguro abrir', variant: 'destructive' })
+      } else if (e.message === 'TAMPERED') {
+        toast({ title: 'Arquivo corrompido ou alterado', variant: 'destructive' })
+      } else {
+        toast({ title: 'Arquivo não pode ser descriptografado', variant: 'destructive' })
+      }
+    }
+  }
 
   const handleFileChange = (f: File | undefined) => {
     if (!f) {
@@ -612,7 +700,12 @@ export default function TripDocuments() {
             {viewDoc ? decryptedNames[viewDoc.id] || viewDoc.nome_arquivo : ''}
           </div>
           <div className="flex-1 bg-slate-100 rounded-md overflow-hidden relative flex flex-col items-center justify-center">
-            {viewDoc && decryptedUrl ? (
+            {viewError ? (
+              <div className="flex flex-col items-center text-red-500 space-y-4 text-center px-4">
+                <AlertCircle className="h-12 w-12" />
+                <p className="font-medium">{viewError}</p>
+              </div>
+            ) : viewDoc && decryptedUrl ? (
               <PdfViewer
                 url={decryptedUrl}
                 title={decryptedNames[viewDoc.id] || viewDoc.nome_arquivo}
@@ -628,21 +721,9 @@ export default function TripDocuments() {
             <Button variant="outline" onClick={() => setViewDoc(null)}>
               Fechar
             </Button>
-            {viewDoc && decryptedUrl && (
-              <Button asChild>
-                <a
-                  href={decryptedUrl}
-                  download={decryptedNames[viewDoc.id] || viewDoc.nome_arquivo}
-                >
-                  <Download className="mr-2 h-4 w-4" /> Download
-                </a>
-              </Button>
-            )}
-            {viewDoc && !decryptedUrl && (
-              <Button disabled>
-                <Download className="mr-2 h-4 w-4 animate-pulse" /> Preparando...
-              </Button>
-            )}
+            <Button onClick={handleDownload} disabled={!viewDoc || !!viewError}>
+              <Download className="mr-2 h-4 w-4" /> Download Seguro
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
