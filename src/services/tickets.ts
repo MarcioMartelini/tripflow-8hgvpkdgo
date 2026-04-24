@@ -16,6 +16,8 @@ export interface Ticket {
   moeda?: string
   status?: string
   arquivo?: string
+  categoria?: string
+  categoria_outro_descricao?: string
 }
 
 export const getTickets = async (tripId: string): Promise<Ticket[]> => {

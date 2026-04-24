@@ -26,6 +26,13 @@ onRecordAfterCreateSuccess((e) => {
   record.set('tipo', itinerarioTipo)
   record.set('local', reserva.getString('local'))
 
+  if (reserva.get('categoria')) {
+    record.set('categoria', reserva.get('categoria'))
+  }
+  if (reserva.get('categoria_outro_descricao')) {
+    record.set('categoria_outro_descricao', reserva.get('categoria_outro_descricao'))
+  }
+
   $app.save(record)
 
   return e.next()

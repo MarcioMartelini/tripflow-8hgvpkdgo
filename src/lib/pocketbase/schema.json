@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-24T00:31:28.226Z",
+  "generatedAt": "2026-04-24T00:35:55.749Z",
   "collections": [
     {
       "name": "users",
@@ -388,6 +388,26 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "categoria",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "hospedagem",
+            "transporte",
+            "alimentação",
+            "atividade",
+            "compras",
+            "outro"
+          ]
+        },
+        {
+          "name": "categoria_outro_descricao",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": []
@@ -582,6 +602,26 @@
           "type": "file",
           "required": false,
           "system": false
+        },
+        {
+          "name": "categoria",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "hospedagem",
+            "transporte",
+            "alimentação",
+            "atividade",
+            "compras",
+            "outro"
+          ]
+        },
+        {
+          "name": "categoria_outro_descricao",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -698,6 +738,26 @@
         {
           "name": "arquivo",
           "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "categoria",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "hospedagem",
+            "transporte",
+            "alimentação",
+            "atividade",
+            "compras",
+            "outro"
+          ]
+        },
+        {
+          "name": "categoria_outro_descricao",
+          "type": "text",
           "required": false,
           "system": false
         }

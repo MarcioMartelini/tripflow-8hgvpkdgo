@@ -51,6 +51,8 @@ export function ActivityModal({
     notas: '',
     preco: '',
     moeda: 'BRL',
+    categoria: 'atividade',
+    categoria_outro_descricao: '',
   })
 
   useEffect(() => {
@@ -66,6 +68,8 @@ export function ActivityModal({
           notas: initialData.notas || '',
           preco: initialData.preco?.toString() || '',
           moeda: initialData.moeda || 'BRL',
+          categoria: initialData.categoria || 'atividade',
+          categoria_outro_descricao: initialData.categoria_outro_descricao || '',
         })
       } else {
         setForm({
@@ -78,6 +82,8 @@ export function ActivityModal({
           notas: '',
           preco: '',
           moeda: 'BRL',
+          categoria: 'atividade',
+          categoria_outro_descricao: '',
         })
       }
       setFiles([]) // Reset files on open
@@ -106,6 +112,15 @@ export function ActivityModal({
       return
     }
 
+    if (form.categoria === 'outro' && !form.categoria_outro_descricao.trim()) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'A explicação é obrigatória quando a categoria for "Outro".',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setLoading(true)
     try {
       const formData = new FormData()
@@ -119,6 +134,11 @@ export function ActivityModal({
       formData.append('notas', form.notas)
       if (form.preco) formData.append('preco', form.preco)
       formData.append('moeda', form.moeda)
+      formData.append('categoria', form.categoria)
+      formData.append(
+        'categoria_outro_descricao',
+        form.categoria === 'outro' ? form.categoria_outro_descricao : '',
+      )
 
       files.forEach((file) => {
         formData.append('arquivos', file)
@@ -178,6 +198,39 @@ export function ActivityModal({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="categoria">Categoria *</Label>
+              <Select
+                value={form.categoria}
+                onValueChange={(v) => setForm({ ...form, categoria: v })}
+              >
+                <SelectTrigger id="categoria">
+                  <SelectValue placeholder="Selecione a categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hospedagem">Hospedagem</SelectItem>
+                  <SelectItem value="transporte">Transporte</SelectItem>
+                  <SelectItem value="alimentação">Alimentação</SelectItem>
+                  <SelectItem value="atividade">Atividade</SelectItem>
+                  <SelectItem value="compras">Compras</SelectItem>
+                  <SelectItem value="outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {form.categoria === 'outro' && (
+              <div className="space-y-2">
+                <Label htmlFor="categoria_outro_descricao">Explicação *</Label>
+                <Input
+                  id="categoria_outro_descricao"
+                  placeholder="Especifique a categoria"
+                  value={form.categoria_outro_descricao}
+                  onChange={(e) => setForm({ ...form, categoria_outro_descricao: e.target.value })}
+                />
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

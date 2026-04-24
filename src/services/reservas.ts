@@ -16,6 +16,8 @@ export interface Reserva {
   status?: string
   notas?: string
   arquivo?: string
+  categoria?: string
+  categoria_outro_descricao?: string
 }
 
 export const getReservas = async (tripId: string): Promise<Reserva[]> => {

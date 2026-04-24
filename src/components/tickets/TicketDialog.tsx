@@ -49,7 +49,15 @@ export function TicketDialog({ open, onOpenChange, tripId, ticket, onSuccess }: 
     if (open) {
       setError('')
       setFieldErrors({})
-      setFormData(ticket || { tipo: 'voo', moeda: 'BRL', status: 'confirmado', preco: 0 })
+      setFormData(
+        ticket || {
+          tipo: 'voo',
+          moeda: 'BRL',
+          status: 'confirmado',
+          preco: 0,
+          categoria: 'transporte',
+        },
+      )
     }
   }, [open, ticket])
 
@@ -78,6 +86,7 @@ export function TicketDialog({ open, onOpenChange, tripId, ticket, onSuccess }: 
       'numero_confirmacao',
       'preco',
       'moeda',
+      'categoria',
     ] as const
     requiredFields.forEach((field) => {
       if (formData[field] === undefined || formData[field] === null || formData[field] === '') {
@@ -100,15 +109,25 @@ export function TicketDialog({ open, onOpenChange, tripId, ticket, onSuccess }: 
       }
     }
 
+    if (formData.categoria === 'outro' && !formData.categoria_outro_descricao?.trim()) {
+      newErrors.categoria_outro_descricao =
+        'A explicação é obrigatória quando a categoria for "Outro".'
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors)
       return
     }
 
+    const finalData = { ...formData }
+    if (finalData.categoria !== 'outro') {
+      finalData.categoria_outro_descricao = ''
+    }
+
     setLoading(true)
     try {
-      if (ticket?.id) await updateTicket(ticket.id, formData)
-      else await createTicket({ ...formData, viagem_id: tripId } as Ticket)
+      if (ticket?.id) await updateTicket(ticket.id, finalData)
+      else await createTicket({ ...finalData, viagem_id: tripId } as Ticket)
 
       toast({ title: ticket ? 'Ticket atualizado com sucesso!' : 'Ticket adicionado com sucesso!' })
       onSuccess()
@@ -153,6 +172,36 @@ export function TicketDialog({ open, onOpenChange, tripId, ticket, onSuccess }: 
                 { value: 'cancelado', label: 'Cancelado' },
               ]}
             />
+
+            <FormSelect
+              label="Categoria *"
+              value={formData.categoria}
+              onChange={(v: any) => handleChange('categoria', v)}
+              error={fieldErrors.categoria}
+              options={[
+                { value: 'hospedagem', label: 'Hospedagem' },
+                { value: 'transporte', label: 'Transporte' },
+                { value: 'alimentação', label: 'Alimentação' },
+                { value: 'atividade', label: 'Atividade' },
+                { value: 'compras', label: 'Compras' },
+                { value: 'outro', label: 'Outro' },
+              ]}
+            />
+            {formData.categoria === 'outro' && (
+              <div className="space-y-1">
+                <Label>Explicação (Categoria Outro) *</Label>
+                <Input
+                  value={formData.categoria_outro_descricao || ''}
+                  onChange={(e) => handleChange('categoria_outro_descricao', e.target.value)}
+                  placeholder="Especifique a categoria..."
+                />
+                {fieldErrors.categoria_outro_descricao && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {fieldErrors.categoria_outro_descricao}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1">
               <Label>Origem *</Label>

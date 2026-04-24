@@ -15,6 +15,8 @@ export interface ItinerarioEvent {
   arquivos?: string[]
   preco?: number
   moeda?: string
+  categoria?: string
+  categoria_outro_descricao?: string
   expand?: any
 
   // Aliases for backward compatibility in some components

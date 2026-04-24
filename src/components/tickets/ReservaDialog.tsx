@@ -50,7 +50,15 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
     if (open) {
       setError('')
       setFieldErrors({})
-      setFormData(reserva || { tipo: 'hotel', moeda: 'BRL', status: 'confirmado', preco: 0 })
+      setFormData(
+        reserva || {
+          tipo: 'hotel',
+          moeda: 'BRL',
+          status: 'confirmado',
+          preco: 0,
+          categoria: 'hospedagem',
+        },
+      )
     }
   }, [open, reserva])
 
@@ -74,6 +82,7 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
       'data_checkin',
       'preco',
       'moeda',
+      'categoria',
     ] as const
     requiredFields.forEach((field) => {
       if (formData[field] === undefined || formData[field] === null || formData[field] === '') {
@@ -92,15 +101,25 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
       }
     }
 
+    if (formData.categoria === 'outro' && !formData.categoria_outro_descricao?.trim()) {
+      newErrors.categoria_outro_descricao =
+        'A explicação é obrigatória quando a categoria for "Outro".'
+    }
+
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors)
       return
     }
 
+    const finalData = { ...formData }
+    if (finalData.categoria !== 'outro') {
+      finalData.categoria_outro_descricao = ''
+    }
+
     setLoading(true)
     try {
-      if (reserva?.id) await updateReserva(reserva.id, formData)
-      else await createReserva({ ...formData, viagem_id: tripId } as Reserva)
+      if (reserva?.id) await updateReserva(reserva.id, finalData)
+      else await createReserva({ ...finalData, viagem_id: tripId } as Reserva)
 
       toast({
         title: reserva ? 'Reserva atualizada com sucesso!' : 'Reserva adicionada com sucesso!',
@@ -147,6 +166,36 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
                 { value: 'cancelado', label: 'Cancelado' },
               ]}
             />
+
+            <FormSelect
+              label="Categoria *"
+              value={formData.categoria}
+              onChange={(v: any) => handleChange('categoria', v)}
+              error={fieldErrors.categoria}
+              options={[
+                { value: 'hospedagem', label: 'Hospedagem' },
+                { value: 'transporte', label: 'Transporte' },
+                { value: 'alimentação', label: 'Alimentação' },
+                { value: 'atividade', label: 'Atividade' },
+                { value: 'compras', label: 'Compras' },
+                { value: 'outro', label: 'Outro' },
+              ]}
+            />
+            {formData.categoria === 'outro' && (
+              <div className="space-y-1">
+                <Label>Explicação (Categoria Outro) *</Label>
+                <Input
+                  value={formData.categoria_outro_descricao || ''}
+                  onChange={(e) => handleChange('categoria_outro_descricao', e.target.value)}
+                  placeholder="Especifique a categoria..."
+                />
+                {fieldErrors.categoria_outro_descricao && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {fieldErrors.categoria_outro_descricao}
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1">
               <Label>Nome *</Label>

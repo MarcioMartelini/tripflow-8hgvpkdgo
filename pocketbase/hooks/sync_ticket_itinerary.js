@@ -28,6 +28,13 @@ onRecordAfterCreateSuccess((e) => {
   record.set('tipo', itinerarioTipo)
   record.set('local', origem)
 
+  if (ticket.get('categoria')) {
+    record.set('categoria', ticket.get('categoria'))
+  }
+  if (ticket.get('categoria_outro_descricao')) {
+    record.set('categoria_outro_descricao', ticket.get('categoria_outro_descricao'))
+  }
+
   $app.save(record)
 
   return e.next()
