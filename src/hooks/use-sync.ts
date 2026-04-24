@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { getOfflineOps, removeOfflineOp } from '@/lib/offline-db'
+import { getOfflineOps, removeOfflineOp, saveOfflineOp } from '@/lib/offline-db'
 import pb from '@/lib/pocketbase/client'
-import { createSyncLog } from '@/services/sincronizacao_offline'
+import { createSyncLog, markAsSynced } from '@/services/sincronizacao_offline'
 import { useToast } from '@/hooks/use-toast'
 
 export type SyncState = 'online' | 'offline' | 'syncing' | 'synced'
@@ -38,18 +38,27 @@ export function useSync() {
             }
           })
           await pb.collection(collection).create(data)
-          await createSyncLog({
+          const log = await createSyncLog({
             usuario_id: op.userId,
             tipo,
             acao: 'criar',
             dados: JSON.stringify(op.payload),
           })
+          await markAsSynced(log.id)
         } else if (op.action === 'update' && op.originalId) {
           try {
             const current = await pb.collection(collection).getOne(op.originalId)
             const currentUpdated = new Date(current.updated).getTime()
             if (currentUpdated > op.timestamp) {
               console.warn('Conflito detectado, a versão do servidor é mais recente.')
+              await pb.collection('conflitos_offline').create({
+                usuario_id: op.userId,
+                tipo: tipo,
+                dados_originais: current,
+                dados_conflitantes: op.payload,
+                data_conflito: new Date().toISOString(),
+                resolvido: false,
+              })
             } else {
               const data = new FormData()
               Object.keys(op.payload).forEach((k) => {
@@ -64,28 +73,36 @@ export function useSync() {
           } catch (e: any) {
             if (e.status !== 404) throw e
           }
-          await createSyncLog({
+          const log = await createSyncLog({
             usuario_id: op.userId,
             tipo,
             acao: 'editar',
             dados: JSON.stringify(op.payload),
           })
+          await markAsSynced(log.id)
         } else if (op.action === 'delete' && op.originalId) {
           try {
             await pb.collection(collection).delete(op.originalId)
           } catch (e: any) {
             if (e.status !== 404) throw e
           }
-          await createSyncLog({
+          const log = await createSyncLog({
             usuario_id: op.userId,
             tipo,
             acao: 'deletar',
             dados: JSON.stringify({ id: op.originalId }),
           })
+          await markAsSynced(log.id)
         }
         await removeOfflineOp(storeName, op.localId)
       } catch (e) {
         console.error(`Falha ao sincronizar registro local ${op.localId}`, e)
+        op.retryCount = (op.retryCount || 0) + 1
+        if (op.retryCount >= 3) {
+          await removeOfflineOp(storeName, op.localId)
+        } else {
+          await saveOfflineOp(storeName, op)
+        }
       }
     }
   }
@@ -118,6 +135,7 @@ export function useSync() {
     if (remaining === 0) {
       setSyncState('synced')
       toast({ title: 'Tudo sincronizado!' })
+      window.dispatchEvent(new Event('sync-completed'))
       setTimeout(() => setSyncState('online'), 3000)
     } else {
       setSyncState('online')
@@ -131,6 +149,11 @@ export function useSync() {
     }
     const handleOffline = () => {
       setSyncState('offline')
+      toast({
+        title: 'Você está offline',
+        description: 'As alterações serão salvas localmente.',
+        variant: 'destructive',
+      })
     }
 
     window.addEventListener('online', handleOnline)

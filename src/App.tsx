@@ -17,6 +17,7 @@ import TripBudget from './pages/TripBudget'
 import Documents from './pages/Documents'
 import Alerts from './pages/Alerts'
 import TripReport from './pages/TripReport'
+import SyncHistory from './pages/SyncHistory'
 import { AuthProvider } from './hooks/use-auth'
 
 const Generic = ({ title }: { title: string }) => (
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/orcamento/:tripId" element={<TripBudget />} />
             <Route path="/trips/:id/report" element={<TripReport />} />
             <Route path="/alerts" element={<Alerts />} />
+            <Route path="/settings/sync-history" element={<SyncHistory />} />
           </Route>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

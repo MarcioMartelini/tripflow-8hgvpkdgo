@@ -6,6 +6,7 @@ export interface OfflineOperation {
   timestamp: number
   status: 'pending' | 'syncing' | 'error'
   userId: string
+  retryCount?: number
 }
 
 const DB_NAME = 'TripFlowOfflineDB'

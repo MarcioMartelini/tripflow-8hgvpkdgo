@@ -201,6 +201,15 @@ export default function Layout() {
                   <User className="mr-2 h-4 w-4" />
                   <span>Perfil</span>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/settings/sync-history"
+                    className="flex items-center cursor-pointer w-full"
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    <span>Histórico de Sync</span>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={signOut} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sair</span>

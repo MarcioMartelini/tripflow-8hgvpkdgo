@@ -73,6 +73,9 @@ export default function TripBudget() {
 
   useEffect(() => {
     loadData()
+    const handleSyncCompleted = () => loadData()
+    window.addEventListener('sync-completed', handleSyncCompleted)
+    return () => window.removeEventListener('sync-completed', handleSyncCompleted)
   }, [tripId])
 
   useRealtime('orcamento_planejado', loadData)

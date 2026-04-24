@@ -198,6 +198,9 @@ export default function TripItinerary() {
 
   useEffect(() => {
     loadData()
+    const handleSyncCompleted = () => loadData()
+    window.addEventListener('sync-completed', handleSyncCompleted)
+    return () => window.removeEventListener('sync-completed', handleSyncCompleted)
   }, [id])
 
   useRealtime('itinerario', (e) => {
