@@ -276,7 +276,7 @@ export default function TripReport() {
         <table className="w-full border-collapse block print:table">
           <thead className="hidden print:table-header-group">
             <tr>
-              <th className="pb-6 border-b border-slate-200 text-left font-normal bg-white">
+              <th className="pb-6 border-b border-slate-200 text-left font-normal bg-white print:pb-8 print:pt-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div
@@ -396,7 +396,7 @@ export default function TripReport() {
                   )}
 
                   {/* Section Transportes */}
-                  <section className="space-y-4">
+                  <section className="space-y-4 print:mt-6">
                     <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
                       <Plane className="h-5 w-5 text-slate-500" />
                       Transporte
@@ -406,8 +406,8 @@ export default function TripReport() {
                         Nenhum transporte registrado
                       </div>
                     ) : (
-                      <div className="border border-slate-200 rounded-lg overflow-x-auto">
-                        <Table className="min-w-[700px]">
+                      <div className="border border-slate-200 rounded-lg overflow-x-auto print:overflow-visible print:border-0 print:shadow-none">
+                        <Table className="min-w-[700px] print:min-w-full">
                           <TableHeader>
                             <TableRow>
                               <TableHead>Tipo</TableHead>
@@ -446,7 +446,7 @@ export default function TripReport() {
                   </section>
 
                   {/* Section Reservas */}
-                  <section className="space-y-4">
+                  <section className="space-y-4 print:mt-6">
                     <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
                       <Bed className="h-5 w-5 text-slate-500" />
                       Acomodação & Refeições
@@ -456,8 +456,8 @@ export default function TripReport() {
                         Nenhuma reserva registrada
                       </div>
                     ) : (
-                      <div className="border border-slate-200 rounded-lg overflow-x-auto">
-                        <Table className="min-w-[700px]">
+                      <div className="border border-slate-200 rounded-lg overflow-x-auto print:overflow-visible print:border-0 print:shadow-none">
+                        <Table className="min-w-[700px] print:min-w-full">
                           <TableHeader>
                             <TableRow>
                               <TableHead>Tipo</TableHead>
@@ -499,7 +499,7 @@ export default function TripReport() {
                   </section>
 
                   {/* Section Itinerary */}
-                  <section className="space-y-4">
+                  <section className="space-y-4 print:mt-6">
                     <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
                       <MapPin className="h-5 w-5 text-slate-500" />
                       Itinerário
@@ -509,8 +509,8 @@ export default function TripReport() {
                         Nenhuma atividade registrada
                       </div>
                     ) : (
-                      <div className="border border-slate-200 rounded-lg overflow-x-auto">
-                        <Table className="min-w-[700px]">
+                      <div className="border border-slate-200 rounded-lg overflow-x-auto print:overflow-visible print:border-0 print:shadow-none">
+                        <Table className="min-w-[700px] print:min-w-full">
                           <TableHeader>
                             <TableRow>
                               <TableHead>Data</TableHead>
@@ -564,7 +564,7 @@ export default function TripReport() {
                   </section>
 
                   {/* Section Budget */}
-                  <section className="space-y-4">
+                  <section className="space-y-4 print:mt-6">
                     <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
                       <AlertCircle className="h-5 w-5 text-slate-500" />
                       Comparativo de Orçamento ({targetCurrency})
@@ -585,9 +585,9 @@ export default function TripReport() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start break-inside-avoid">
-                      <div className="border border-slate-200 rounded-lg overflow-x-auto break-inside-avoid">
-                        <Table className="min-w-[500px]">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start print:flex print:flex-col print:gap-8">
+                      <div className="border border-slate-200 rounded-lg overflow-x-auto print:overflow-visible print:border-0 print:shadow-none w-full">
+                        <Table className="min-w-[500px] print:min-w-full">
                           <TableHeader>
                             <TableRow>
                               <TableHead>Categoria</TableHead>
@@ -620,7 +620,7 @@ export default function TripReport() {
                               </TableRow>
                             ))}
                           </TableBody>
-                          <TableFooter className="bg-slate-50 break-inside-avoid">
+                          <TableFooter className="bg-slate-50 break-inside-avoid print:bg-transparent print:border-t print:border-slate-200">
                             <TableRow>
                               <TableCell className="font-bold">Total</TableCell>
                               <TableCell className="text-right font-bold text-slate-900">
@@ -642,7 +642,7 @@ export default function TripReport() {
                         </Table>
                       </div>
 
-                      <Card className="shadow-none border border-slate-200 break-inside-avoid">
+                      <Card className="shadow-none border border-slate-200 break-inside-avoid print:border-0 print:shadow-none w-full">
                         <CardContent className="pt-6">
                           {totalPlanned === 0 && totalRealized === 0 ? (
                             <div className="h-[300px] flex items-center justify-center text-slate-500">
@@ -699,7 +699,7 @@ export default function TripReport() {
                   </section>
 
                   {/* Section Documents */}
-                  <section className="space-y-4">
+                  <section className="space-y-4 print:mt-6">
                     <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
                       <FileText className="h-5 w-5 text-slate-500" />
                       Documentos
@@ -709,8 +709,8 @@ export default function TripReport() {
                         Nenhum documento registrado
                       </div>
                     ) : (
-                      <div className="border border-slate-200 rounded-lg overflow-x-auto">
-                        <Table className="min-w-[600px]">
+                      <div className="border border-slate-200 rounded-lg overflow-x-auto print:overflow-visible print:border-0 print:shadow-none">
+                        <Table className="min-w-[600px] print:min-w-full">
                           <TableHeader>
                             <TableRow>
                               <TableHead>Nome</TableHead>
