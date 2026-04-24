@@ -34,6 +34,8 @@ export default function Layout() {
   const location = useLocation()
   const { toast } = useToast()
   const [unreadAlerts, setUnreadAlerts] = useState(0)
+  const [tripsCount, setTripsCount] = useState(0)
+  const [docsCount, setDocsCount] = useState(0)
   const [isSelectTripOpen, setIsSelectTripOpen] = useState(false)
   const { syncState, pendingCount } = useSync()
 
@@ -43,8 +45,38 @@ export default function Layout() {
         .getList(1, 1, { filter: `usuario_id = "${user.id}" && lido = false` })
         .then((res) => setUnreadAlerts(res.totalItems))
         .catch(() => {})
+
+      pb.collection('trips')
+        .getList(1, 1, { filter: `owner_id = "${user.id}"` })
+        .then((res) => setTripsCount(res.totalItems))
+        .catch(() => {})
+
+      pb.collection('documentos')
+        .getList(1, 1, { filter: `usuario_id = "${user.id}"` })
+        .then((res) => setDocsCount(res.totalItems))
+        .catch(() => {})
     }
   }, [user])
+
+  useRealtime('trips', (e) => {
+    if (!user) return
+    if (e.action === 'create' || e.action === 'delete') {
+      pb.collection('trips')
+        .getList(1, 1, { filter: `owner_id = "${user.id}"` })
+        .then((res) => setTripsCount(res.totalItems))
+        .catch(() => {})
+    }
+  })
+
+  useRealtime('documentos', (e) => {
+    if (!user) return
+    if (e.action === 'create' || e.action === 'delete') {
+      pb.collection('documentos')
+        .getList(1, 1, { filter: `usuario_id = "${user.id}"` })
+        .then((res) => setDocsCount(res.totalItems))
+        .catch(() => {})
+    }
+  })
 
   useRealtime('alertas', (e) => {
     if (!user) return
@@ -136,6 +168,16 @@ export default function Layout() {
                     {item.name === 'Alertas' && unreadAlerts > 0 && (
                       <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
                         {unreadAlerts}
+                      </span>
+                    )}
+                    {item.name === 'Minhas Viagens' && tripsCount > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-200 text-slate-700 px-1.5 text-[10px] font-bold">
+                        {tripsCount}
+                      </span>
+                    )}
+                    {item.name === 'Documentos' && docsCount > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-200 text-slate-700 px-1.5 text-[10px] font-bold">
+                        {docsCount}
                       </span>
                     )}
                     {isActive && (
