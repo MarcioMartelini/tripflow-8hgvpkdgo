@@ -17,7 +17,7 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
   const isValidUrl = Boolean(url && url.trim() !== '')
 
   const finalUrl =
-    isValidUrl && !url.includes('token=') && !url.startsWith('blob:') && !url.startsWith('data:')
+    isValidUrl && !url.includes('token=') && !url.startsWith('data:')
       ? `${url}${url.includes('?') ? '&' : '?'}token=${pb.authStore.token}`
       : url
 
@@ -67,7 +67,7 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
     return (
       <div className="flex flex-col items-center justify-center h-full flex-1 text-slate-500 p-8 text-center bg-slate-50">
         <AlertCircle className="h-12 w-12 mb-4 text-slate-400" />
-        <p className="font-medium text-slate-700 mb-2">Não foi possível carregar o documento</p>
+        <p className="font-medium text-slate-700 mb-2">Documento não disponível</p>
         <p className="text-sm text-slate-500 mb-4">
           O arquivo pode estar indisponível ou o formato não é suportado.
         </p>
@@ -102,9 +102,8 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
           />
         </div>
       ) : (
-        <embed
+        <iframe
           src={finalUrl}
-          type="application/pdf"
           title={title}
           className="w-full h-full flex-1 border-0 bg-white"
           width="100%"

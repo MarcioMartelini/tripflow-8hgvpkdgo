@@ -197,16 +197,13 @@ export default function TripTicketsReservations() {
       toast({ title: `Baixando ${tripFiles.length} documentos...` })
 
       for (const file of tripFiles) {
-        const response = await fetch(file.url)
-        const blob = await response.blob()
-        const blobUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')
-        a.href = blobUrl
+        a.href = file.url
+        a.target = '_blank'
         a.download = file.name
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
-        URL.revokeObjectURL(blobUrl)
         await new Promise((r) => setTimeout(r, 500)) // 500ms delay between files
       }
 
