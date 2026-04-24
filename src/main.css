@@ -76,6 +76,19 @@
   }
 }
 
+@layer base {
+  @media print {
+    @page {
+      margin: 15mm;
+      size: auto;
+    }
+    body {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
+}
+
 @layer utilities {
   .animate-fade-in {
     animation: fade-in 0.5s ease-out;
