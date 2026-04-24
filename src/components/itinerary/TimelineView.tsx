@@ -80,6 +80,7 @@ export function TimelineView({
   const [legs, setLegs] = useState<Record<string, { distance: number; duration: number }>>({})
 
   const [isOptimizing, setIsOptimizing] = useState(false)
+  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false)
   const [suggestion, setSuggestion] = useState<{
     optimized: ItinerarioEvent[]
     savings: number
@@ -97,8 +98,12 @@ export function TimelineView({
   useEffect(() => {
     const fetchRoute = async () => {
       const valid = events.filter((e) => e.latitude && e.longitude)
-      if (valid.length < 2) return
+      if (valid.length < 2) {
+        setLegs({})
+        return
+      }
 
+      setIsCalculatingRoute(true)
       const newLegs: Record<string, { distance: number; duration: number }> = {}
 
       await Promise.all(
@@ -106,8 +111,13 @@ export function TimelineView({
           const next = valid[i + 1]
           const mode = ev.meio_transporte || 'carro'
           let profile = 'driving'
-          if (mode === 'andando' || mode === 'transporte_publico') profile = 'foot'
-          if (mode === 'bicicleta') profile = 'bike'
+          let multiplier = 1
+          if (mode === 'andando') profile = 'walking'
+          if (mode === 'bicicleta') profile = 'cycling'
+          if (mode === 'transporte_publico') {
+            profile = 'driving'
+            multiplier = 1.5
+          }
 
           try {
             const res = await fetch(
@@ -117,7 +127,7 @@ export function TimelineView({
             if (data.code === 'Ok' && data.routes?.[0]) {
               newLegs[`${ev.id}-${next.id}`] = {
                 distance: data.routes[0].distance / 1000,
-                duration: data.routes[0].duration / 60,
+                duration: (data.routes[0].duration / 60) * multiplier,
               }
             }
           } catch (e) {
@@ -126,6 +136,7 @@ export function TimelineView({
         }),
       )
       setLegs(newLegs)
+      setIsCalculatingRoute(false)
     }
     fetchRoute()
   }, [events])
@@ -140,8 +151,8 @@ export function TimelineView({
 
     const mode = valid[0]?.meio_transporte || 'carro'
     let profile = 'driving'
-    if (mode === 'andando' || mode === 'transporte_publico') profile = 'foot'
-    if (mode === 'bicicleta') profile = 'bike'
+    if (mode === 'andando') profile = 'walking'
+    if (mode === 'bicicleta') profile = 'cycling'
 
     try {
       const coords = valid.map((e) => `${e.longitude},${e.latitude}`).join(';')
@@ -224,7 +235,12 @@ export function TimelineView({
     <div className="animate-fade-in">
       {validCount >= 2 && (
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-white p-4 sm:p-5 rounded-xl mb-6 border shadow-sm gap-4">
-          {totalDistance === 0 && totalDuration === 0 ? (
+          {isCalculatingRoute ? (
+            <div className="flex items-center gap-3 w-full lg:w-auto flex-1 py-1">
+              <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-slate-500 font-medium">Calculando...</span>
+            </div>
+          ) : totalDistance === 0 && totalDuration === 0 ? (
             <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-sm border border-amber-200 w-full lg:w-auto flex-1">
               Não foi possível calcular a rota para as localizações selecionadas. Verifique se os
               endereços são válidos e acessíveis pelo transporte.

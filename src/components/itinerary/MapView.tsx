@@ -75,6 +75,7 @@ export function MapView({
   const [optimizedRouteInfo, setOptimizedRouteInfo] = useState<RouteInfo | null>(null)
   const [isOptimizing, setIsOptimizing] = useState(false)
   const [showOptimized, setShowOptimized] = useState(false)
+  const [isCalculatingRoute, setIsCalculatingRoute] = useState(false)
 
   const validEvents = useMemo(() => {
     return events
@@ -117,8 +118,8 @@ export function MapView({
 
   const osrmProfile = useMemo(() => {
     const defaultMode = validEvents.length > 0 ? validEvents[0].meio_transporte || 'carro' : 'carro'
-    if (defaultMode === 'andando' || defaultMode === 'transporte_publico') return 'foot'
-    if (defaultMode === 'bicicleta') return 'bike'
+    if (defaultMode === 'andando') return 'walking'
+    if (defaultMode === 'bicicleta') return 'cycling'
     return 'driving'
   }, [validEvents])
 
@@ -147,6 +148,7 @@ export function MapView({
       return
     }
     const fetchRoute = async () => {
+      setIsCalculatingRoute(true)
       try {
         let totalDistance = 0
         let totalDuration = 0
@@ -158,8 +160,13 @@ export function MapView({
             const next = validEvents[i + 1]
             const mode = ev.meio_transporte || 'carro'
             let profile = 'driving'
-            if (mode === 'andando' || mode === 'transporte_publico') profile = 'foot'
-            if (mode === 'bicicleta') profile = 'bike'
+            let multiplier = 1
+            if (mode === 'andando') profile = 'walking'
+            if (mode === 'bicicleta') profile = 'cycling'
+            if (mode === 'transporte_publico') {
+              profile = 'driving'
+              multiplier = 1.5 // estimate 50% slower due to stops/waiting
+            }
 
             const res = await fetch(
               `https://router.project-osrm.org/route/v1/${profile}/${ev.longitude},${ev.latitude};${next.longitude},${next.latitude}?overview=full&geometries=geojson`,
@@ -168,10 +175,10 @@ export function MapView({
             if (data.code === 'Ok' && data.routes.length > 0) {
               const route = data.routes[0]
               totalDistance += route.distance / 1000
-              totalDuration += route.duration / 60
+              totalDuration += (route.duration / 60) * multiplier
               legs[i] = {
                 distance: route.distance / 1000,
-                duration: route.duration / 60,
+                duration: (route.duration / 60) * multiplier,
               }
               geometries[i] = route.geometry
             } else {
@@ -189,6 +196,8 @@ export function MapView({
         })
       } catch (err) {
         console.error('Error fetching route', err)
+      } finally {
+        setIsCalculatingRoute(false)
       }
     }
     fetchRoute()
@@ -431,13 +440,20 @@ export function MapView({
               </Select>
               {transportMode === 'transporte_publico' && (
                 <p className="text-[10px] text-amber-600 font-medium">
-                  *Tempo do transporte público usa base a pé para cálculo interno. O app de
-                  navegação calculará corretamente.
+                  *Tempo do transporte público é estimado. O app de navegação calculará com maior
+                  precisão.
                 </p>
               )}
             </div>
 
-            {activeRoute ? (
+            {isCalculatingRoute ? (
+              <div className="flex items-center justify-center p-6 bg-slate-50 border rounded-xl shadow-sm">
+                <span className="flex items-center gap-2 text-slate-500 text-sm font-medium">
+                  <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                  Calculando rota...
+                </span>
+              </div>
+            ) : activeRoute ? (
               activeRoute.distance === 0 && activeRoute.duration === 0 ? (
                 <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-sm border border-amber-200 mt-2">
                   Não foi possível calcular a rota para as localizações selecionadas. Verifique se
