@@ -89,8 +89,8 @@ export function ActivityModal({
       } else {
         setForm({
           data: format(selectedDate, 'yyyy-MM-dd'),
-          hora_inicio: '09:00',
-          hora_fim: '10:00',
+          hora_inicio: '',
+          hora_fim: '',
           tipo: 'atividade',
           atividade: '',
           local: '',
@@ -248,11 +248,10 @@ export function ActivityModal({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="hora_inicio">Hora Início</Label>
+              <Label htmlFor="hora_inicio">Hora Início (Opcional)</Label>
               <Input
                 id="hora_inicio"
                 type="time"
-                required
                 value={form.hora_inicio}
                 onChange={(e) => setForm({ ...form, hora_inicio: e.target.value })}
               />

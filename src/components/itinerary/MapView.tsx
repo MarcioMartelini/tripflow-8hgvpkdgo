@@ -63,10 +63,7 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
     const waypoints = [...optimizedRouteInfo.waypoints].sort(
       (a, b) => a.waypoint_index - b.waypoint_index,
     )
-    return waypoints.map(
-      (wp) =>
-        validEvents.find((e) => e.longitude === wp.location[0] && e.latitude === wp.location[1])!,
-    )
+    return waypoints.map((wp) => validEvents[wp.original_index]).filter(Boolean)
   }, [validEvents, showOptimized, optimizedRouteInfo])
 
   useEffect(() => {
@@ -123,10 +120,7 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
     const waypoints = [...optimizedRouteInfo.waypoints].sort(
       (a, b) => a.waypoint_index - b.waypoint_index,
     )
-    const newOrder = waypoints.map(
-      (wp) =>
-        validEvents.find((e) => e.longitude === wp.location[0] && e.latitude === wp.location[1])!,
-    )
+    const newOrder = waypoints.map((wp) => validEvents[wp.original_index]).filter(Boolean)
 
     const times = newOrder
       .map((e) => e.hora_inicio)

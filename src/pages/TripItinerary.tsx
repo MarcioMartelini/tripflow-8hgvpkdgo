@@ -81,8 +81,8 @@ export default function TripItinerary() {
 
       // Initialize selected date on first load
       if (loading && tripData.start_date) {
-        const startDate = parseISO(tripData.start_date)
-        setSelectedDate(startDate)
+        const startString = tripData.start_date.substring(0, 10) + 'T12:00:00'
+        setSelectedDate(new Date(startString))
       }
     } catch (err) {
       setError(true)
@@ -140,9 +140,11 @@ export default function TripItinerary() {
   const allTripDays = useMemo(() => {
     if (!trip?.start_date || !trip?.end_date) return []
     try {
+      const startString = trip.start_date.substring(0, 10) + 'T12:00:00'
+      const endString = trip.end_date.substring(0, 10) + 'T12:00:00'
       return eachDayOfInterval({
-        start: parseISO(trip.start_date),
-        end: parseISO(trip.end_date),
+        start: new Date(startString),
+        end: new Date(endString),
       })
     } catch (e) {
       return []
@@ -154,7 +156,8 @@ export default function TripItinerary() {
   }, [selectedDate])
 
   const dailyEvents = useMemo(() => {
-    return events.filter((e) => isSameDay(new Date(e.data.substring(0, 10)), selectedDate))
+    const selectedDateString = format(selectedDate, 'yyyy-MM-dd')
+    return events.filter((e) => e.data.substring(0, 10) === selectedDateString)
   }, [events, selectedDate])
 
   if (loading) {
@@ -322,9 +325,8 @@ export default function TripItinerary() {
             <h2 className="text-2xl font-bold mb-6 border-b pb-2">Itinerário Completo</h2>
             <div className="space-y-6">
               {allTripDays.map((day) => {
-                const dayEvents = events.filter((e) =>
-                  isSameDay(new Date(e.data.substring(0, 10)), day),
-                )
+                const dayString = format(day, 'yyyy-MM-dd')
+                const dayEvents = events.filter((e) => e.data.substring(0, 10) === dayString)
                 if (dayEvents.length === 0) return null
 
                 // Sort by time
