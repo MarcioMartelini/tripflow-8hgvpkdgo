@@ -20,33 +20,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  ArrowLeft,
-  Plus,
-  LayoutGrid,
-  List,
-  AlertTriangle,
-  Printer,
-  Share2,
-  RefreshCw,
-} from 'lucide-react'
+import { ArrowLeft, Plus, LayoutGrid, List, AlertTriangle, Printer } from 'lucide-react'
 import { format, parseISO, isSameDay, eachDayOfInterval, addDays, startOfDay } from 'date-fns'
-import {
-  getIntegracaoGoogleCalendar,
-  saveIntegracaoGoogleCalendar,
-  type IntegracaoGoogleCalendar,
-} from '@/services/integracao_google_calendar'
-import pb from '@/lib/pocketbase/client'
 import { cn } from '@/lib/utils'
-
-const GoogleCalendarIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path
-      d="M16 2v2h-8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-1V2h-2zm2 18H6V9h12v11z"
-      fill="currentColor"
-    />
-  </svg>
-)
 import { ptBR } from 'date-fns/locale'
 
 import { ActivityModal } from '@/components/itinerary/ActivityModal'
@@ -71,96 +47,6 @@ export default function TripItinerary() {
   const [eventToEdit, setEventToEdit] = useState<ItinerarioEvent | null>(null)
   const [eventToDelete, setEventToDelete] = useState<ItinerarioEvent | null>(null)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
-  const [googleIntegration, setGoogleIntegration] = useState<IntegracaoGoogleCalendar | null>(null)
-  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false)
-  const [isDisconnectDialogOpen, setIsDisconnectDialogOpen] = useState(false)
-  const [isSyncing, setIsSyncing] = useState(false)
-
-  useEffect(() => {
-    if (user) {
-      getIntegracaoGoogleCalendar(user.id).then(setGoogleIntegration)
-    }
-  }, [user])
-
-  const handleSyncGCal = async () => {
-    if (!trip) return
-    setIsSyncing(true)
-    try {
-      await pb.send(`/backend/v1/trips/${trip.id}/sync-gcal`, { method: 'POST' })
-      toast({ title: 'Calendário sincronizado com sucesso!' })
-      loadData()
-    } catch (err: any) {
-      toast({ title: 'Erro ao sincronizar', description: err.message, variant: 'destructive' })
-    } finally {
-      setIsSyncing(false)
-    }
-  }
-
-  const handleShareCalendar = () => {
-    const calendarId = (trip as any)?.google_calendar_id
-    if (!calendarId) return
-    const url = `https://calendar.google.com/calendar/u/0/r?cid=${calendarId}`
-    navigator.clipboard.writeText(url)
-    toast({ title: 'Link do calendário copiado!' })
-  }
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data === 'google-calendar-connected') {
-        toast({ title: 'Google Calendar conectado com sucesso!' })
-        if (user) {
-          getIntegracaoGoogleCalendar(user.id).then((integ) => {
-            setGoogleIntegration(integ)
-            if (trip && !(trip as any).google_calendar_id) {
-              handleSyncGCal()
-            }
-          })
-        }
-      }
-    }
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
-  }, [user, toast, trip])
-
-  const handleConnectGoogle = async () => {
-    try {
-      setIsConnectingGoogle(true)
-      const res = await pb.send('/backend/v1/google-calendar/auth-url', { method: 'GET' })
-      if (res.url) {
-        const width = 500
-        const height = 600
-        const left = window.screen.width / 2 - width / 2
-        const top = window.screen.height / 2 - height / 2
-        window.open(
-          res.url,
-          'GoogleAuth',
-          `width=${width},height=${height},top=${top},left=${left}`,
-        )
-      }
-    } catch (err) {
-      toast({ title: 'Erro ao iniciar conexão com Google', variant: 'destructive' })
-    } finally {
-      setIsConnectingGoogle(false)
-    }
-  }
-
-  const handleDisconnectGoogle = async () => {
-    if (!user) return
-    try {
-      await saveIntegracaoGoogleCalendar(user.id, {
-        conectado: false,
-        token_acesso: '',
-        token_refresh: '',
-      })
-      setGoogleIntegration((prev) =>
-        prev ? { ...prev, conectado: false, token_acesso: '', token_refresh: '' } : null,
-      )
-      toast({ title: 'Google Calendar desconectado' })
-      setIsDisconnectDialogOpen(false)
-    } catch (err) {
-      toast({ title: 'Erro ao desconectar', variant: 'destructive' })
-    }
-  }
 
   const handleGeneratePDF = async () => {
     try {
@@ -298,38 +184,6 @@ export default function TripItinerary() {
           </Link>
         </Button>
         <div className="flex flex-wrap gap-2 items-center">
-          {googleIntegration?.conectado ? (
-            <>
-              {!(trip as any).google_calendar_id ? (
-                <Button variant="outline" onClick={handleSyncGCal} disabled={isSyncing}>
-                  <RefreshCw className={cn('w-4 h-4 mr-2', isSyncing && 'animate-spin')} />
-                  Sincronizar com Google
-                </Button>
-              ) : (
-                <Button variant="outline" onClick={handleShareCalendar}>
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Compartilhar Calendário
-                </Button>
-              )}
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => setIsDisconnectDialogOpen(true)}
-              >
-                <GoogleCalendarIcon className="w-4 h-4 mr-2" />
-                Desconectar Google Calendar
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="secondary"
-              className="bg-slate-200 hover:bg-slate-300 text-slate-800"
-              onClick={handleConnectGoogle}
-              disabled={isConnectingGoogle}
-            >
-              <GoogleCalendarIcon className="w-4 h-4 mr-2" />
-              Conectar Google Calendar
-            </Button>
-          )}
           <Button onClick={handleGeneratePDF} variant="outline" disabled={isGeneratingPDF}>
             <Printer className="h-4 w-4 mr-2" /> {isGeneratingPDF ? 'Gerando...' : 'Gerar PDF'}
           </Button>
@@ -515,27 +369,6 @@ export default function TripItinerary() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDelete}>
               Sim, deletar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={isDisconnectDialogOpen} onOpenChange={setIsDisconnectDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Desconectar Google Calendar</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja desconectar o Google Calendar? Suas atividades deixarão de ser
-              sincronizadas.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
-              onClick={handleDisconnectGoogle}
-            >
-              Sim, desconectar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-24T02:36:03.962Z",
+  "generatedAt": "2026-04-24T02:42:33.417Z",
   "collections": [
     {
       "name": "users",
@@ -169,12 +169,6 @@
         },
         {
           "name": "descricao",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "google_calendar_id",
           "type": "text",
           "required": false,
           "system": false
@@ -411,12 +405,6 @@
         },
         {
           "name": "categoria_outro_descricao",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "google_event_id",
           "type": "text",
           "required": false,
           "system": false
@@ -1118,67 +1106,6 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_sinc_offline_usuario_id ON sincronizacao_offline (usuario_id)"]
-    },
-    {
-      "name": "integracao_google_calendar",
-      "type": "base",
-      "apiRules": {
-        "list": "@request.auth.id != '' && usuario_id = @request.auth.id",
-        "view": "@request.auth.id != '' && usuario_id = @request.auth.id",
-        "create": "@request.auth.id != ''",
-        "update": "@request.auth.id != '' && usuario_id = @request.auth.id",
-        "delete": "@request.auth.id != '' && usuario_id = @request.auth.id"
-      },
-      "fields": [
-        {
-          "name": "usuario_id",
-          "type": "relation",
-          "required": true,
-          "system": false,
-          "collectionRef": "users"
-        },
-        {
-          "name": "google_calendar_id",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "token_acesso",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "token_refresh",
-          "type": "text",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "conectado",
-          "type": "bool",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "created",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate"]
-        },
-        {
-          "name": "updated",
-          "type": "autodate",
-          "required": false,
-          "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
-        }
-      ],
-      "indexes": [
-        "CREATE INDEX idx_integracao_gc_usuario_id ON integracao_google_calendar (usuario_id)"
-      ]
     },
     {
       "name": "conflitos_offline",
