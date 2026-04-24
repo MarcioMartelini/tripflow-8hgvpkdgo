@@ -47,6 +47,7 @@ import { TimelineView } from '@/components/itinerary/TimelineView'
 import { WeeklyGrid } from '@/components/itinerary/WeeklyGrid'
 import { MapView } from '@/components/itinerary/MapView'
 import pb from '@/lib/pocketbase/client'
+import { PdfViewerDialog } from '@/components/PdfViewerDialog'
 
 export default function TripItinerary() {
   const { id } = useParams<{ id: string }>()
@@ -68,6 +69,7 @@ export default function TripItinerary() {
   const [eventToEdit, setEventToEdit] = useState<ItinerarioEvent | null>(null)
   const [eventToDelete, setEventToDelete] = useState<ItinerarioEvent | null>(null)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [previewFile, setPreviewFile] = useState<{ url: string; title: string } | null>(null)
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
 
@@ -469,6 +471,7 @@ export default function TripItinerary() {
                 onEdit={setEventToEdit}
                 onDelete={setEventToDelete}
                 onAdd={() => setIsAddModalOpen(true)}
+                onPreview={(url: string, title: string) => setPreviewFile({ url, title })}
                 onUpdateEvent={async (id, data) => {
                   setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)))
                   await updateItinerario(id, data)
@@ -487,6 +490,7 @@ export default function TripItinerary() {
                   setSelectedDate(d)
                   setViewMode('daily')
                 }}
+                onPreview={(url: string, title: string) => setPreviewFile({ url, title })}
               />
             )}
             {viewMode === 'map' && (
@@ -494,6 +498,7 @@ export default function TripItinerary() {
                 events={filteredDailyEvents}
                 trip={trip}
                 onEditEvent={setEventToEdit}
+                onPreview={(url: string, title: string) => setPreviewFile({ url, title })}
                 onUpdateEvent={async (id, data) => {
                   setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)))
                   await updateItinerario(id, data)
@@ -571,6 +576,7 @@ export default function TripItinerary() {
         tripId={trip.id}
         selectedDate={selectedDate}
         initialData={eventToEdit}
+        onPreview={(url, title) => setPreviewFile({ url, title })}
       />
 
       <AlertDialog open={!!eventToDelete} onOpenChange={(o) => !o && setEventToDelete(null)}>
@@ -589,6 +595,12 @@ export default function TripItinerary() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PdfViewerDialog
+        url={previewFile?.url || null}
+        title={previewFile?.title || ''}
+        onClose={() => setPreviewFile(null)}
+      />
     </div>
   )
 }

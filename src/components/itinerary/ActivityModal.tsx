@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast'
 import { createItinerario, updateItinerario, ItinerarioEvent } from '@/services/itinerario'
 import { format } from 'date-fns'
 import { ActivityComments } from './ActivityComments'
+import pb from '@/lib/pocketbase/client'
 
 interface ActivityModalProps {
   isOpen: boolean
@@ -30,6 +31,7 @@ interface ActivityModalProps {
   tripId: string
   selectedDate: Date
   initialData?: ItinerarioEvent | null
+  onPreview?: (url: string, title: string) => void
 }
 
 export function ActivityModal({
@@ -39,6 +41,7 @@ export function ActivityModal({
   tripId,
   selectedDate,
   initialData,
+  onPreview,
 }: ActivityModalProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
@@ -433,17 +436,32 @@ export function ActivityModal({
                   className="flex items-center justify-between p-2 border rounded-md bg-slate-50"
                 >
                   <span className="text-sm truncate mr-2">{file}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setExistingFiles((prev) => prev.filter((f) => f !== file))
-                      setFilesToRemove((prev) => [...prev, file])
-                    }}
-                  >
-                    Remover
-                  </Button>
+                  <div className="flex gap-2">
+                    {initialData && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          const url = pb.files.getURL(initialData, file)
+                          onPreview?.(url, file)
+                        }}
+                      >
+                        Ver
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setExistingFiles((prev) => prev.filter((f) => f !== file))
+                        setFilesToRemove((prev) => [...prev, file])
+                      }}
+                    >
+                      Remover
+                    </Button>
+                  </div>
                 </div>
               ))}
               {newFiles.map((file, i) => (

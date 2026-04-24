@@ -24,6 +24,7 @@ interface Props {
   reserva: Reserva
   onEdit: (r: Reserva) => void
   onDelete: () => void
+  onPreview: (url: string, title: string) => void
 }
 
 export function ReservaCard({ reserva, onEdit, onDelete }: Props) {
@@ -129,7 +130,7 @@ export function ReservaCard({ reserva, onEdit, onDelete }: Props) {
                       className="h-8 text-xs"
                       onClick={() => {
                         const url = pb.files.getURL(reserva, f)
-                        window.open(url, '_blank')
+                        onPreview(url, `Reserva - ${reserva.nome}`)
                       }}
                       aria-label={`Visualizar PDF de ${reserva.nome}`}
                     >

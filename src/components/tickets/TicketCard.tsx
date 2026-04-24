@@ -24,6 +24,7 @@ interface Props {
   ticket: Ticket
   onEdit: (t: Ticket) => void
   onDelete: () => void
+  onPreview: (url: string, title: string) => void
 }
 
 export function TicketCard({ ticket, onEdit, onDelete }: Props) {
@@ -129,7 +130,10 @@ export function TicketCard({ ticket, onEdit, onDelete }: Props) {
                       className="h-8 text-xs"
                       onClick={() => {
                         const url = pb.files.getURL(ticket, f)
-                        window.open(url, '_blank')
+                        onPreview(
+                          url,
+                          `Ticket - ${ticket.origem || 'Origem'} para ${ticket.destino || 'Destino'}`,
+                        )
                       }}
                       aria-label={`Visualizar PDF de ${ticket.origem || 'Origem'} para ${ticket.destino || 'Destino'}`}
                     >
