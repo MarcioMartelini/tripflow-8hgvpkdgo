@@ -34,14 +34,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-const formatDuration = (mins: number) => {
-  const m = Math.round(mins)
-  if (m < 60) return `${m} min`
-  const h = Math.floor(m / 60)
-  const rem = m % 60
-  return rem > 0 ? `${h}h ${rem}min` : `${h}h`
-}
-
 interface TimelineViewProps {
   events: ItinerarioEvent[]
   onEdit: (event: ItinerarioEvent) => void
@@ -183,7 +175,6 @@ export function TimelineView({
 
   const validEvents = events.filter((e) => e.latitude && e.longitude)
   const totalDistance = Object.values(legs).reduce((acc, leg) => acc + leg.distance, 0)
-  const totalDuration = Object.values(legs).reduce((acc, leg) => acc + leg.duration, 0)
 
   if (events.length === 0) {
     return (
@@ -212,10 +203,10 @@ export function TimelineView({
               <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
               <span className="text-slate-500 font-medium">Calculando...</span>
             </div>
-          ) : totalDistance === 0 && totalDuration === 0 ? (
+          ) : totalDistance === 0 ? (
             <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-sm border border-amber-200 w-full lg:w-auto flex-1">
               Não foi possível calcular a rota para as localizações selecionadas. Verifique se os
-              endereços são válidos e acessíveis pelo transporte.
+              endereços são válidos e acessíveis.
             </div>
           ) : (
             <div className="flex items-center w-full lg:w-auto">
@@ -230,78 +221,10 @@ export function TimelineView({
                   {totalDistance > 0 ? `${totalDistance.toFixed(1)} km` : '--'}
                 </span>
               </div>
-              <div className="h-10 w-px bg-slate-200 mx-4 sm:mx-6"></div>
-              <div className="flex flex-col flex-1 lg:flex-none">
-                <span
-                  className="text-[11px] font-semibold uppercase tracking-wide"
-                  style={{ color: '#54769F' }}
-                >
-                  TEMPO ESTIMADO
-                </span>
-                <span className="font-bold text-2xl text-slate-900 mt-0.5">
-                  {totalDuration > 0 ? formatDuration(totalDuration) : '--'}
-                </span>
-              </div>
             </div>
           )}
 
           <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto mt-2 lg:mt-0">
-            <Select
-              value={validEvents[0]?.meio_transporte || 'carro'}
-              onValueChange={async (val) => {
-                try {
-                  if (onUpdateAllEvents) {
-                    const ids = validEvents
-                      .filter((ev) => ev.meio_transporte !== val)
-                      .map((ev) => ev.id)
-                    if (ids.length > 0) {
-                      await onUpdateAllEvents(ids, { meio_transporte: val })
-                    }
-                  } else {
-                    await Promise.all(
-                      validEvents.map((ev) => {
-                        if (ev.meio_transporte !== val) {
-                          return updateItinerario(ev.id, { meio_transporte: val })
-                        }
-                      }),
-                    )
-                  }
-                  toast({ title: 'Meio de transporte atualizado para o dia!' })
-                } catch (e) {
-                  toast({
-                    title: 'Erro de rede. Não foi possível atualizar o transporte.',
-                    variant: 'destructive',
-                  })
-                }
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-[180px] bg-slate-50 h-10">
-                <SelectValue placeholder="Meio de Transporte" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="carro">
-                  <div className="flex items-center gap-2">
-                    <Car className="h-4 w-4" /> Carro
-                  </div>
-                </SelectItem>
-                <SelectItem value="andando">
-                  <div className="flex items-center gap-2">
-                    <Footprints className="h-4 w-4" /> A Pé
-                  </div>
-                </SelectItem>
-                <SelectItem value="transporte_publico">
-                  <div className="flex items-center gap-2">
-                    <Train className="h-4 w-4" /> Público
-                  </div>
-                </SelectItem>
-                <SelectItem value="bicicleta">
-                  <div className="flex items-center gap-2">
-                    <Bike className="h-4 w-4" /> Bicicleta
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
             {validCount >= 3 && !suggestion && (
               <Button
                 onClick={handleOptimize}
@@ -465,57 +388,9 @@ export function TimelineView({
 
               {leg && (
                 <div className="ml-6 py-2 flex flex-wrap items-center gap-3 text-xs font-medium text-slate-500">
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={event.meio_transporte || 'carro'}
-                      onValueChange={async (val) => {
-                        try {
-                          if (onUpdateEvent) {
-                            await onUpdateEvent(event.id, { meio_transporte: val })
-                          } else {
-                            await updateItinerario(event.id, { meio_transporte: val })
-                          }
-                          toast({ title: 'Transporte atualizado com sucesso!' })
-                        } catch (e) {
-                          toast({
-                            title: 'Erro de rede. Não foi possível atualizar o transporte.',
-                            variant: 'destructive',
-                          })
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="h-7 w-[140px] text-xs bg-slate-50 border-slate-200">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="carro">
-                          <div className="flex items-center gap-2">
-                            <Car className="h-3 w-3" /> Carro
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="andando">
-                          <div className="flex items-center gap-2">
-                            <Footprints className="h-3 w-3" /> A Pé
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="transporte_publico">
-                          <div className="flex items-center gap-2">
-                            <Train className="h-3 w-3" /> Público
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="bicicleta">
-                          <div className="flex items-center gap-2">
-                            <Bike className="h-3 w-3" /> Bicicleta
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
                   <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded border border-slate-100">
                     <Navigation className="w-3 h-3 text-slate-400" />
                     <span>{leg.distance.toFixed(1)} km</span>
-                    <span className="opacity-50">•</span>
-                    <span>{formatDuration(leg.duration)}</span>
                   </div>
                 </div>
               )}

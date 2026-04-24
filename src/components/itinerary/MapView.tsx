@@ -31,14 +31,6 @@ interface RouteInfo {
   legs?: { distance: number; duration: number }[]
 }
 
-const formatDuration = (mins: number) => {
-  const m = Math.round(mins)
-  if (m < 60) return `${m} min`
-  const h = Math.floor(m / 60)
-  const rem = m % 60
-  return rem > 0 ? `${h}h ${rem}min` : `${h}h`
-}
-
 const getIconSvg = (tipo?: string) => {
   switch (tipo) {
     case 'voo':
@@ -90,41 +82,6 @@ export function MapView({
     )
     return waypoints.map((wp) => validEvents[wp.original_index]).filter(Boolean)
   }, [validEvents, showOptimized, optimizedRouteInfo])
-
-  const [transportMode, setTransportMode] = useState<string>('')
-
-  const handleTransportModeChange = async (value: string) => {
-    setTransportMode(value)
-    try {
-      if (onUpdateAllEvents) {
-        const ids = validEvents.filter((ev) => ev.meio_transporte !== value).map((ev) => ev.id)
-        if (ids.length > 0) {
-          await onUpdateAllEvents(ids, { meio_transporte: value })
-        }
-      } else {
-        await Promise.all(
-          validEvents.map((ev) => {
-            if (ev.meio_transporte !== value) {
-              return updateItinerario(ev.id, { meio_transporte: value })
-            }
-          }),
-        )
-      }
-      toast({ title: 'Meio de transporte de todas as atividades atualizado!' })
-    } catch (e) {
-      toast({
-        title: 'Erro de rede. Não foi possível atualizar o transporte.',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const osrmProfile = useMemo(() => {
-    const defaultMode = validEvents.length > 0 ? validEvents[0].meio_transporte || 'carro' : 'carro'
-    if (defaultMode === 'andando') return 'walking'
-    if (defaultMode === 'bicicleta') return 'cycling'
-    return 'driving'
-  }, [validEvents])
 
   useEffect(() => {
     if ((window as any).L) {
@@ -374,45 +331,6 @@ export function MapView({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-slate-500 uppercase">
-                Mudar Meio de Transporte de Tudo
-              </label>
-              <Select value={transportMode} onValueChange={handleTransportModeChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Aplicar em todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="carro">
-                    <div className="flex items-center gap-2">
-                      <Car className="h-4 w-4" /> Carro
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="andando">
-                    <div className="flex items-center gap-2">
-                      <Footprints className="h-4 w-4" /> A Pé
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="transporte_publico">
-                    <div className="flex items-center gap-2">
-                      <Train className="h-4 w-4" /> Transporte Público
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="bicicleta">
-                    <div className="flex items-center gap-2">
-                      <Bike className="h-4 w-4" /> Bicicleta
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              {transportMode === 'transporte_publico' && (
-                <p className="text-[10px] text-amber-600 font-medium">
-                  *Tempo do transporte público é estimado. O app de navegação calculará com maior
-                  precisão.
-                </p>
-              )}
-            </div>
-
             {isCalculatingRoute ? (
               <div className="flex items-center justify-center p-6 bg-slate-50 border rounded-xl shadow-sm">
                 <span className="flex items-center gap-2 text-slate-500 text-sm font-medium">
@@ -421,7 +339,7 @@ export function MapView({
                 </span>
               </div>
             ) : activeRoute ? (
-              activeRoute.distance === 0 && activeRoute.duration === 0 ? (
+              activeRoute.distance === 0 ? (
                 <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-sm border border-amber-200 mt-2">
                   Não foi possível calcular a rota para as localizações selecionadas. Verifique se
                   os endereços são válidos e acessíveis.
@@ -438,18 +356,6 @@ export function MapView({
                       </span>
                       <span className="font-bold text-xl text-slate-900 mt-0.5">
                         {activeRoute.distance > 0 ? `${activeRoute.distance.toFixed(1)} km` : '--'}
-                      </span>
-                    </div>
-                    <div className="h-10 w-px bg-slate-200 mx-3"></div>
-                    <div className="flex flex-col flex-1 pl-1">
-                      <span
-                        className="text-[10px] font-semibold uppercase tracking-wide"
-                        style={{ color: '#54769F' }}
-                      >
-                        TEMPO ESTIMADO
-                      </span>
-                      <span className="font-bold text-xl text-slate-900 mt-0.5">
-                        {activeRoute.duration > 0 ? formatDuration(activeRoute.duration) : '--'}
                       </span>
                     </div>
                   </div>
@@ -542,55 +448,9 @@ export function MapView({
                     </p>
                     {leg && i < orderedEvents.length - 1 && (
                       <div className="mt-3 flex flex-col gap-2">
-                        {!showOptimized && (
-                          <Select
-                            value={ev.meio_transporte || 'carro'}
-                            onValueChange={async (val) => {
-                              try {
-                                if (onUpdateEvent) {
-                                  await onUpdateEvent(ev.id, { meio_transporte: val })
-                                } else {
-                                  await updateItinerario(ev.id, { meio_transporte: val })
-                                }
-                                toast({ title: 'Transporte atualizado com sucesso!' })
-                              } catch (e) {
-                                toast({
-                                  title: 'Erro de rede. Não foi possível atualizar o transporte.',
-                                  variant: 'destructive',
-                                })
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="h-6 w-[130px] text-[10px] bg-slate-50 border-slate-200">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="carro">
-                                <div className="flex items-center gap-2">
-                                  <Car className="h-3 w-3" /> Carro
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="andando">
-                                <div className="flex items-center gap-2">
-                                  <Footprints className="h-3 w-3" /> A Pé
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="transporte_publico">
-                                <div className="flex items-center gap-2">
-                                  <Train className="h-3 w-3" /> Público
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="bicicleta">
-                                <div className="flex items-center gap-2">
-                                  <Bike className="h-3 w-3" /> Bike
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
                         <div className="flex items-center gap-1 text-[10px] font-medium text-slate-400 bg-slate-50 w-fit px-2 py-0.5 rounded border">
                           <Navigation className="w-3 h-3 text-slate-400" />
-                          {leg.distance.toFixed(1)} km • {formatDuration(leg.duration)}
+                          {leg.distance.toFixed(1)} km
                         </div>
                       </div>
                     )}
