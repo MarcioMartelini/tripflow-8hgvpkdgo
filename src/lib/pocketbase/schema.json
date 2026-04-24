@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-24T03:51:04.280Z",
+  "generatedAt": "2026-04-24T04:03:27.484Z",
   "collections": [
     {
       "name": "users",
@@ -1185,6 +1185,47 @@
           "name": "resolvido",
           "type": "bool",
           "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "chaves_usuario",
+      "type": "base",
+      "apiRules": {
+        "list": "usuario_id = @request.auth.id",
+        "view": "usuario_id = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "usuario_id = @request.auth.id",
+        "delete": "usuario_id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "usuario_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "salt",
+          "type": "text",
+          "required": true,
           "system": false
         },
         {

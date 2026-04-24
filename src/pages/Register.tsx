@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import { useEncryption } from '@/hooks/use-encryption'
 import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +24,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const { signUp } = useAuth()
+  const { initializeKey } = useEncryption()
   const navigate = useNavigate()
   const { toast } = useToast()
 
@@ -55,8 +57,9 @@ export default function Register() {
         if (pb.authStore.record?.id) {
           await pb.collection('users').update(pb.authStore.record.id, { name })
         }
+        await initializeKey(password)
       } catch (err) {
-        console.error('Failed to update user name', err)
+        console.error('Failed to init encryption or update user', err)
       }
       setLoading(false)
       navigate('/')

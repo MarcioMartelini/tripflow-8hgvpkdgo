@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
+import { useEncryption } from '@/hooks/use-encryption'
 import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +21,7 @@ export default function Login() {
   const [password, setPassword] = useState('Skip@Pass')
   const [loading, setLoading] = useState(false)
   const { signIn } = useAuth()
+  const { initializeKey } = useEncryption()
   const navigate = useNavigate()
   const { toast } = useToast()
 
@@ -27,10 +29,17 @@ export default function Login() {
     e.preventDefault()
     setLoading(true)
     const { error } = await signIn(email, password)
-    setLoading(false)
+
     if (!error) {
+      try {
+        await initializeKey(password)
+      } catch (encErr) {
+        console.error('Failed to initialize encryption key', encErr)
+      }
+      setLoading(false)
       navigate('/')
     } else {
+      setLoading(false)
       toast({
         title: 'Erro de Autenticação',
         description: 'Credenciais inválidas.',

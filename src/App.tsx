@@ -19,6 +19,7 @@ import Alerts from './pages/Alerts'
 import TripReport from './pages/TripReport'
 import SyncHistory from './pages/SyncHistory'
 import { AuthProvider } from './hooks/use-auth'
+import { EncryptionProvider } from './hooks/use-encryption'
 
 const Generic = ({ title }: { title: string }) => (
   <div className="container py-12 flex flex-col items-center justify-center animate-fade-in">
@@ -30,28 +31,30 @@ const Generic = ({ title }: { title: string }) => (
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Index />} />
-            <Route path="/trips" element={<Trips />} />
-            <Route path="/trips/:id" element={<TripDetails />} />
-            <Route path="/trips/:id/itinerary" element={<TripItinerary />} />
-            <Route path="/trips/:tripId/tickets-reservas" element={<TripTicketsReservations />} />
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/documents/:tripId" element={<TripDocuments />} />
-            <Route path="/orcamento/:tripId" element={<TripBudget />} />
-            <Route path="/trips/:id/report" element={<TripReport />} />
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/settings/sync-history" element={<SyncHistory />} />
-          </Route>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
+      <EncryptionProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Index />} />
+              <Route path="/trips" element={<Trips />} />
+              <Route path="/trips/:id" element={<TripDetails />} />
+              <Route path="/trips/:id/itinerary" element={<TripItinerary />} />
+              <Route path="/trips/:tripId/tickets-reservas" element={<TripTicketsReservations />} />
+              <Route path="/documents" element={<Documents />} />
+              <Route path="/documents/:tripId" element={<TripDocuments />} />
+              <Route path="/orcamento/:tripId" element={<TripBudget />} />
+              <Route path="/trips/:id/report" element={<TripReport />} />
+              <Route path="/alerts" element={<Alerts />} />
+              <Route path="/settings/sync-history" element={<SyncHistory />} />
+            </Route>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </EncryptionProvider>
     </AuthProvider>
   </BrowserRouter>
 )
