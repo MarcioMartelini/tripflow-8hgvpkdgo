@@ -1,5 +1,5 @@
 import { Reserva, deleteReserva } from '@/services/reservas'
-import { Hotel, Utensils, Compass, CalendarDays, Edit, Trash2, FileText } from 'lucide-react'
+import { Hotel, Utensils, Compass, CalendarDays, Edit, Trash2, ExternalLink } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,10 +24,9 @@ interface Props {
   reserva: Reserva
   onEdit: (r: Reserva) => void
   onDelete: () => void
-  onPreview: (url: string, title: string, updated?: string) => void
 }
 
-export function ReservaCard({ reserva, onEdit, onDelete, onPreview }: Props) {
+export function ReservaCard({ reserva, onEdit, onDelete }: Props) {
   const { user } = useAuth()
   const { toast } = useToast()
   const userCurrency = user?.moeda_padrao || 'BRL'
@@ -123,19 +122,16 @@ export function ReservaCard({ reserva, onEdit, onDelete, onPreview }: Props) {
               <div className="flex flex-wrap gap-2 justify-end">
                 {(Array.isArray(reserva.arquivo) ? reserva.arquivo : [reserva.arquivo]).map(
                   (f, i, arr) => (
-                    <Button
-                      key={i}
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => {
-                        const url = pb.files.getURL(reserva, f, { token: pb.authStore.token })
-                        onPreview(url, `Reserva - ${reserva.nome}`, reserva.updated)
-                      }}
-                      aria-label={`Visualizar PDF de ${reserva.nome}`}
-                    >
-                      <FileText className="h-3 w-3 mr-1" />
-                      Ver {arr.length > 1 ? i + 1 : ''}
+                    <Button key={i} variant="outline" size="sm" className="h-8 text-xs" asChild>
+                      <a
+                        href={pb.files.getURL(reserva, f, { token: pb.authStore.token })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Abrir documento de ${reserva.nome}`}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Abrir {arr.length > 1 ? i + 1 : ''}
+                      </a>
                     </Button>
                   ),
                 )}

@@ -1,5 +1,5 @@
 import { Ticket, deleteTicket } from '@/services/tickets'
-import { Plane, Train, Bus, Ticket as TicketIcon, Edit, Trash2, FileText } from 'lucide-react'
+import { Plane, Train, Bus, Ticket as TicketIcon, Edit, Trash2, ExternalLink } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,10 +24,9 @@ interface Props {
   ticket: Ticket
   onEdit: (t: Ticket) => void
   onDelete: () => void
-  onPreview: (url: string, title: string, updated?: string) => void
 }
 
-export function TicketCard({ ticket, onEdit, onDelete, onPreview }: Props) {
+export function TicketCard({ ticket, onEdit, onDelete }: Props) {
   const { user } = useAuth()
   const { toast } = useToast()
   const userCurrency = user?.moeda_padrao || 'BRL'
@@ -123,23 +122,16 @@ export function TicketCard({ ticket, onEdit, onDelete, onPreview }: Props) {
               <div className="flex flex-wrap gap-2 justify-end">
                 {(Array.isArray(ticket.arquivo) ? ticket.arquivo : [ticket.arquivo]).map(
                   (f, i, arr) => (
-                    <Button
-                      key={i}
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-xs"
-                      onClick={() => {
-                        const url = pb.files.getURL(ticket, f, { token: pb.authStore.token })
-                        onPreview(
-                          url,
-                          `Ticket - ${ticket.origem || 'Origem'} para ${ticket.destino || 'Destino'}`,
-                          ticket.updated,
-                        )
-                      }}
-                      aria-label={`Visualizar PDF de ${ticket.origem || 'Origem'} para ${ticket.destino || 'Destino'}`}
-                    >
-                      <FileText className="h-3 w-3 mr-1" />
-                      Ver {arr.length > 1 ? i + 1 : ''}
+                    <Button key={i} variant="outline" size="sm" className="h-8 text-xs" asChild>
+                      <a
+                        href={pb.files.getURL(ticket, f, { token: pb.authStore.token })}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={`Abrir documento de ${ticket.origem || 'Origem'} para ${ticket.destino || 'Destino'}`}
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Abrir {arr.length > 1 ? i + 1 : ''}
+                      </a>
                     </Button>
                   ),
                 )}

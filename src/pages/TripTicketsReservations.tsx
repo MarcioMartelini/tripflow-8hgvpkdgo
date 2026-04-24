@@ -30,7 +30,6 @@ import { TicketCard } from '@/components/tickets/TicketCard'
 import { ReservaCard } from '@/components/tickets/ReservaCard'
 import { TicketDialog } from '@/components/tickets/TicketDialog'
 import { ReservaDialog } from '@/components/tickets/ReservaDialog'
-import { PdfViewerDialog } from '@/components/PdfViewerDialog'
 
 export default function TripTicketsReservations() {
   const { tripId } = useParams<{ tripId: string }>()
@@ -51,11 +50,6 @@ export default function TripTicketsReservations() {
   const [reservaDialogOpen, setReservaDialogOpen] = useState(false)
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null)
 
-  const [previewFile, setPreviewFile] = useState<{
-    url: string
-    title: string
-    updated?: string
-  } | null>(null)
   const [downloadingAll, setDownloadingAll] = useState(false)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
@@ -353,13 +347,7 @@ export default function TripTicketsReservations() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredTickets.map((t) => (
-                  <TicketCard
-                    key={t.id}
-                    ticket={t}
-                    onEdit={handleEditTicket}
-                    onDelete={loadData}
-                    onPreview={(url, title, updated) => setPreviewFile({ url, title, updated })}
-                  />
+                  <TicketCard key={t.id} ticket={t} onEdit={handleEditTicket} onDelete={loadData} />
                 ))}
               </div>
             )}
@@ -376,7 +364,6 @@ export default function TripTicketsReservations() {
                     reserva={r}
                     onEdit={handleEditReserva}
                     onDelete={loadData}
-                    onPreview={(url, title, updated) => setPreviewFile({ url, title, updated })}
                   />
                 ))}
               </div>
@@ -495,13 +482,6 @@ export default function TripTicketsReservations() {
         tripId={tripId}
         reserva={editingReserva}
         onSuccess={loadData}
-      />
-
-      <PdfViewerDialog
-        url={previewFile?.url || null}
-        title={previewFile?.title || ''}
-        updated={previewFile?.updated}
-        onClose={() => setPreviewFile(null)}
       />
     </div>
   )
