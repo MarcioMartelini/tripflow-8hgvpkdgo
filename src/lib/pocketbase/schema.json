@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-24T04:19:03.340Z",
+  "generatedAt": "2026-04-24T04:25:00.035Z",
   "collections": [
     {
       "name": "users",
@@ -447,8 +447,8 @@
       "name": "documentos",
       "type": "base",
       "apiRules": {
-        "list": "@request.auth.id != '' && usuario_id = @request.auth.id",
-        "view": "@request.auth.id != '' && usuario_id = @request.auth.id",
+        "list": "@request.auth.id != '' && (usuario_id = @request.auth.id || compartilhamento_documentos_via_documento_id.usuario_receptor ?= @request.auth.id)",
+        "view": "@request.auth.id != '' && (usuario_id = @request.auth.id || compartilhamento_documentos_via_documento_id.usuario_receptor ?= @request.auth.id)",
         "create": "@request.auth.id != '' && usuario_id = @request.auth.id",
         "update": "@request.auth.id != '' && usuario_id = @request.auth.id",
         "delete": "@request.auth.id != '' && usuario_id = @request.auth.id"
@@ -1302,6 +1302,65 @@
         }
       ],
       "indexes": []
+    },
+    {
+      "name": "compartilhamento_documentos",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (usuario_compartilhador = @request.auth.id || usuario_receptor = @request.auth.id)",
+        "view": "@request.auth.id != '' && (usuario_compartilhador = @request.auth.id || usuario_receptor = @request.auth.id)",
+        "create": "@request.auth.id != '' && usuario_compartilhador = @request.auth.id",
+        "update": "@request.auth.id != '' && usuario_compartilhador = @request.auth.id",
+        "delete": "@request.auth.id != '' && usuario_compartilhador = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "documento_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "documentos"
+        },
+        {
+          "name": "usuario_compartilhador",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "usuario_receptor",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "consentimento_dado",
+          "type": "bool",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": [
+        "CREATE INDEX `idx_comp_docs_documento` ON `compartilhamento_documentos` (documento_id)",
+        "CREATE INDEX `idx_comp_docs_compartilhador` ON `compartilhamento_documentos` (usuario_compartilhador)",
+        "CREATE INDEX `idx_comp_docs_receptor` ON `compartilhamento_documentos` (usuario_receptor)"
+      ]
     }
   ]
 }

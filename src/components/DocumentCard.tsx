@@ -17,6 +17,7 @@ import {
   Receipt,
   AlertCircle,
   Clock,
+  Share2,
 } from 'lucide-react'
 
 const getTypeIcon = (tipo: string) => {
@@ -53,9 +54,10 @@ interface DocumentCardProps {
   doc: Documento
   onEdit: (doc: Documento) => void
   onDelete: (doc: Documento) => void
+  onShare?: (doc: Documento) => void
 }
 
-export function DocumentCard({ doc, onEdit, onDelete }: DocumentCardProps) {
+export function DocumentCard({ doc, onEdit, onDelete, onShare }: DocumentCardProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const exp = getExpirationStatus(doc.data_expiracao)
   return (
@@ -96,6 +98,16 @@ export function DocumentCard({ doc, onEdit, onDelete }: DocumentCardProps) {
                 onClick={() => setPreviewUrl(getDocumentUrl(doc))}
               >
                 <Eye className="h-4 w-4 mr-2" /> Ver Arquivo
+              </Button>
+            )}
+            {onShare && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onShare(doc)}
+                className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+              >
+                <Share2 className="h-4 w-4" />
               </Button>
             )}
             <Button variant="ghost" size="sm" onClick={() => onEdit(doc)}>

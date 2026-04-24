@@ -34,6 +34,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { FileText, Plus } from 'lucide-react'
 import { DocumentCard } from '@/components/DocumentCard'
+import { ShareDocumentModal } from '@/components/ShareDocumentModal'
+import { SharedDocumentCard } from '@/components/SharedDocumentCard'
+import { getSharedWithMe, CompartilhamentoDocumento } from '@/services/compartilhamento_documentos'
 
 export default function Documents() {
   const { toast } = useToast()
@@ -45,6 +48,8 @@ export default function Documents() {
   const [openModal, setOpenModal] = useState(false)
   const [editDoc, setEditDoc] = useState<Documento | null>(null)
   const [deleteDoc, setDeleteDoc] = useState<Documento | null>(null)
+  const [shareDoc, setShareDoc] = useState<Documento | null>(null)
+  const [sharedDocs, setSharedDocs] = useState<CompartilhamentoDocumento[]>([])
 
   const [viagemId, setViagemId] = useState('')
   const [tipo, setTipo] = useState('')
@@ -57,9 +62,10 @@ export default function Documents() {
 
   const loadData = async () => {
     try {
-      const [d, t] = await Promise.all([getAllDocuments(), getTrips()])
+      const [d, t, s] = await Promise.all([getAllDocuments(), getTrips(), getSharedWithMe()])
       setDocs(d)
       setTrips(t)
+      setSharedDocs(s)
     } catch {
       toast({ title: 'Erro ao carregar dados', variant: 'destructive' })
     } finally {
@@ -71,6 +77,7 @@ export default function Documents() {
     loadData()
   }, [])
   useRealtime('documentos', loadData)
+  useRealtime('compartilhamento_documentos', loadData)
 
   const handleOpenModal = (doc?: Documento) => {
     if (doc) {
@@ -204,10 +211,34 @@ export default function Documents() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredDocs.map((doc) => (
-            <DocumentCard key={doc.id} doc={doc} onEdit={handleOpenModal} onDelete={setDeleteDoc} />
+            <DocumentCard
+              key={doc.id}
+              doc={doc}
+              onEdit={handleOpenModal}
+              onDelete={setDeleteDoc}
+              onShare={setShareDoc}
+            />
           ))}
         </div>
       )}
+
+      {sharedDocs.length > 0 && (
+        <div className="mt-12 space-y-4">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Documentos Compartilhados Comigo</h2>
+            <p className="text-slate-500 mt-1">
+              Documentos que outros viajantes compartilharam com você
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {sharedDocs.map((share) => (
+              <SharedDocumentCard key={share.id} share={share} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <ShareDocumentModal doc={shareDoc} onClose={() => setShareDoc(null)} />
 
       {/* Modal Add/Edit */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
