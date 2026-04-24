@@ -138,7 +138,7 @@ export function TicketCard({ ticket, onEdit, onDelete, onPreview }: Props) {
                       aria-label={`Visualizar PDF de ${ticket.origem || 'Origem'} para ${ticket.destino || 'Destino'}`}
                     >
                       <FileText className="h-3 w-3 mr-1" />
-                      PDF {arr.length > 1 ? i + 1 : ''}
+                      Ver {arr.length > 1 ? i + 1 : ''}
                     </Button>
                   ),
                 )}

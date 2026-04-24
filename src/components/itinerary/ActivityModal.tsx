@@ -428,7 +428,7 @@ export function ActivityModal({
           </div>
 
           <div className="space-y-2 mt-2">
-            <Label>Anexos (PDF)</Label>
+            <Label>Anexos (PDF, JPG, PNG)</Label>
             <div className="space-y-2">
               {existingFiles.map((file, i) => (
                 <div
@@ -485,16 +485,17 @@ export function ActivityModal({
             </div>
             <Input
               type="file"
-              accept="application/pdf"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
               multiple
               onChange={(e: any) => {
                 if (e.target.files) {
                   const addedFiles = Array.from(e.target.files) as File[]
-                  const invalidFiles = addedFiles.filter((f) => f.type !== 'application/pdf')
+                  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+                  const invalidFiles = addedFiles.filter((f) => !allowedTypes.includes(f.type))
                   if (invalidFiles.length > 0) {
                     toast({
                       title: 'Formato inválido',
-                      description: 'Apenas arquivos PDF são permitidos.',
+                      description: 'Apenas PDFs e imagens (JPG, PNG, WebP) são permitidos.',
                       variant: 'destructive',
                     })
                   } else {

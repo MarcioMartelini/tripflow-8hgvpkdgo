@@ -135,7 +135,7 @@ export function ReservaCard({ reserva, onEdit, onDelete, onPreview }: Props) {
                       aria-label={`Visualizar PDF de ${reserva.nome}`}
                     >
                       <FileText className="h-3 w-3 mr-1" />
-                      PDF {arr.length > 1 ? i + 1 : ''}
+                      Ver {arr.length > 1 ? i + 1 : ''}
                     </Button>
                   ),
                 )}
