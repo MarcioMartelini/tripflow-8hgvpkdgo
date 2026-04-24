@@ -35,6 +35,8 @@ import { format, parseISO, isSameDay, eachDayOfInterval, addDays, startOfDay } f
 import { cn } from '@/lib/utils'
 import { ptBR } from 'date-fns/locale'
 
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
 import { ActivityModal } from '@/components/itinerary/ActivityModal'
 import { TimelineView } from '@/components/itinerary/TimelineView'
 import { WeeklyGrid } from '@/components/itinerary/WeeklyGrid'
@@ -191,6 +193,12 @@ export default function TripItinerary() {
       return
     }
 
+    const mode = eventsWithCoords[0]?.meio_transporte || 'carro'
+    let travelmode = 'driving'
+    if (mode === 'andando') travelmode = 'walking'
+    if (mode === 'transporte_publico') travelmode = 'transit'
+    if (mode === 'bicicleta') travelmode = 'bicycling'
+
     if (eventsWithCoords.length === 1) {
       window.open(
         `https://www.google.com/maps/search/?api=1&query=${eventsWithCoords[0].latitude},${eventsWithCoords[0].longitude}`,
@@ -207,7 +215,7 @@ export default function TripItinerary() {
       .map((e) => `${e.latitude},${e.longitude}`)
       .join('|')
 
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}`
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=${travelmode}`
     window.open(url, '_blank')
   }
 
@@ -257,32 +265,24 @@ export default function TripItinerary() {
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
             Itinerário de {trip.title}
           </h1>
-          <div className="flex bg-slate-100 p-1 rounded-lg w-full sm:w-auto print-hidden">
-            <Button
-              variant={viewMode === 'daily' ? 'default' : 'ghost'}
-              size="sm"
-              className="flex-1 sm:flex-none"
-              onClick={() => setViewMode('daily')}
-            >
-              <List className="w-4 h-4 mr-2" /> Lista
-            </Button>
-            <Button
-              variant={viewMode === 'weekly' ? 'default' : 'ghost'}
-              size="sm"
-              className="flex-1 sm:flex-none"
-              onClick={() => setViewMode('weekly')}
-            >
-              <LayoutGrid className="w-4 h-4 mr-2" /> Semanal
-            </Button>
-            <Button
-              variant={viewMode === 'map' ? 'default' : 'ghost'}
-              size="sm"
-              className="flex-1 sm:flex-none"
-              onClick={() => setViewMode('map')}
-            >
-              <MapIcon className="w-4 h-4 mr-2" /> Mapa
-            </Button>
-          </div>
+          <Tabs
+            value={viewMode}
+            onValueChange={(v: any) => setViewMode(v)}
+            className="w-full sm:w-auto print-hidden"
+          >
+            <TabsList className="grid w-full grid-cols-3 sm:flex sm:w-auto">
+              <TabsTrigger value="daily" className="flex items-center gap-1.5 sm:gap-2">
+                <List className="w-4 h-4" /> <span className="text-xs sm:text-sm">Lista</span>
+              </TabsTrigger>
+              <TabsTrigger value="weekly" className="flex items-center gap-1.5 sm:gap-2">
+                <LayoutGrid className="w-4 h-4" />{' '}
+                <span className="text-xs sm:text-sm">Semanal</span>
+              </TabsTrigger>
+              <TabsTrigger value="map" className="flex items-center gap-1.5 sm:gap-2">
+                <MapIcon className="w-4 h-4" /> <span className="text-xs sm:text-sm">Mapa</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 

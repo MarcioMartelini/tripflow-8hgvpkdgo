@@ -2,10 +2,17 @@ import { useEffect, useRef, useState, useMemo } from 'react'
 import { ItinerarioEvent, updateItinerario } from '@/services/itinerario'
 import { Trip } from '@/services/trips'
 import { useToast } from '@/hooks/use-toast'
-import { MapPin, Route, Navigation } from 'lucide-react'
+import { MapPin, Route, Navigation, Car, Footprints, Train, Bike } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface MapViewProps {
   events: ItinerarioEvent[]
@@ -66,6 +73,36 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
     return waypoints.map((wp) => validEvents[wp.original_index]).filter(Boolean)
   }, [validEvents, showOptimized, optimizedRouteInfo])
 
+  const [transportMode, setTransportMode] = useState<string>('carro')
+
+  useEffect(() => {
+    if (validEvents.length > 0 && validEvents[0].meio_transporte) {
+      setTransportMode(validEvents[0].meio_transporte)
+    }
+  }, [validEvents])
+
+  const handleTransportModeChange = async (value: string) => {
+    setTransportMode(value)
+    try {
+      await Promise.all(
+        validEvents.map((ev) => {
+          if (ev.meio_transporte !== value) {
+            return updateItinerario(ev.id, { meio_transporte: value })
+          }
+        }),
+      )
+      toast({ title: 'Meio de transporte atualizado!' })
+    } catch (e) {
+      toast({ title: 'Erro ao atualizar meio de transporte', variant: 'destructive' })
+    }
+  }
+
+  const osrmProfile = useMemo(() => {
+    if (transportMode === 'andando' || transportMode === 'transporte_publico') return 'foot'
+    if (transportMode === 'bicicleta') return 'bike'
+    return 'driving'
+  }, [transportMode])
+
   useEffect(() => {
     if ((window as any).L) {
       setLoaded(true)
@@ -94,7 +131,7 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
       try {
         const coordinates = validEvents.map((e) => `${e.longitude},${e.latitude}`).join(';')
         const res = await fetch(
-          `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson`,
+          `https://router.project-osrm.org/route/v1/${osrmProfile}/${coordinates}?overview=full&geometries=geojson`,
         )
         const data = await res.json()
         if (data.code === 'Ok' && data.routes.length > 0) {
@@ -113,7 +150,7 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
       }
     }
     fetchRoute()
-  }, [validEvents])
+  }, [validEvents, osrmProfile])
 
   const handleApplyOptimization = async () => {
     if (!optimizedRouteInfo?.waypoints) return
@@ -148,7 +185,7 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
     try {
       const coordinates = validEvents.map((e) => `${e.longitude},${e.latitude}`).join(';')
       const res = await fetch(
-        `https://router.project-osrm.org/trip/v1/driving/${coordinates}?source=first&roundtrip=false&overview=full&geometries=geojson`,
+        `https://router.project-osrm.org/trip/v1/${osrmProfile}/${coordinates}?source=first&roundtrip=false&overview=full&geometries=geojson`,
       )
       const data = await res.json()
       if (data.code === 'Ok' && data.trips.length > 0) {
@@ -296,13 +333,51 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
     <div className="flex flex-col md:flex-row gap-4 animate-fade-in">
       <div className="w-full md:w-80 flex flex-col gap-4 shrink-0">
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-lg flex items-center gap-2">
               <Navigation className="h-5 w-5 text-slate-500" />
               Resumo da Rota
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-slate-500 uppercase">
+                Meio de Transporte
+              </label>
+              <Select value={transportMode} onValueChange={handleTransportModeChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o transporte" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="carro">
+                    <div className="flex items-center gap-2">
+                      <Car className="h-4 w-4" /> Carro
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="andando">
+                    <div className="flex items-center gap-2">
+                      <Footprints className="h-4 w-4" /> A Pé
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="transporte_publico">
+                    <div className="flex items-center gap-2">
+                      <Train className="h-4 w-4" /> Transporte Público
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="bicicleta">
+                    <div className="flex items-center gap-2">
+                      <Bike className="h-4 w-4" /> Bicicleta
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {transportMode === 'transporte_publico' && (
+                <p className="text-[10px] text-amber-600 font-medium">
+                  *Tempo estimado a pé. O app externo calculará a rota correta.
+                </p>
+              )}
+            </div>
+
             {activeRoute ? (
               <>
                 <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border">
@@ -422,7 +497,7 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
         </Card>
       </div>
 
-      <div className="flex-1 h-[500px] md:h-[600px] relative rounded-lg overflow-hidden border shadow-sm isolate">
+      <div className="flex-1 h-[50vh] min-h-[400px] md:h-[600px] relative rounded-lg overflow-hidden border shadow-sm isolate">
         <div ref={mapRef} className="absolute inset-0" />
       </div>
     </div>

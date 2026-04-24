@@ -71,9 +71,15 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
       const valid = events.filter((e) => e.latitude && e.longitude)
       const coords = valid.map((e) => `${e.longitude},${e.latitude}`).join(';')
       if (!coords || coords.split(';').length < 2) return
+
+      const mode = valid[0]?.meio_transporte || 'carro'
+      let profile = 'driving'
+      if (mode === 'andando' || mode === 'transporte_publico') profile = 'foot'
+      if (mode === 'bicicleta') profile = 'bike'
+
       try {
         const res = await fetch(
-          `https://router.project-osrm.org/route/v1/driving/${coords}?overview=false`,
+          `https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=false`,
         )
         const data = await res.json()
         if (data.code === 'Ok' && data.routes?.[0]?.legs) {
@@ -102,17 +108,23 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
       return
     }
     setIsOptimizing(true)
+
+    const mode = valid[0]?.meio_transporte || 'carro'
+    let profile = 'driving'
+    if (mode === 'andando' || mode === 'transporte_publico') profile = 'foot'
+    if (mode === 'bicicleta') profile = 'bike'
+
     try {
       const coords = valid.map((e) => `${e.longitude},${e.latitude}`).join(';')
       const res = await fetch(
-        `https://router.project-osrm.org/trip/v1/driving/${coords}?source=first&roundtrip=false`,
+        `https://router.project-osrm.org/trip/v1/${profile}/${coords}?source=first&roundtrip=false`,
       )
       const data = await res.json()
       if (data.code === 'Ok' && data.trips?.[0]) {
         const optimizedDistance = data.trips[0].distance / 1000
 
         const resOrig = await fetch(
-          `https://router.project-osrm.org/route/v1/driving/${coords}?overview=false`,
+          `https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=false`,
         )
         const dataOrig = await resOrig.json()
         const origDistance = dataOrig.routes?.[0]?.distance / 1000 || 0

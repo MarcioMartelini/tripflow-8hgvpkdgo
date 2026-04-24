@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-24T03:11:55.982Z",
+  "generatedAt": "2026-04-24T03:24:51.977Z",
   "collections": [
     {
       "name": "users",
@@ -432,6 +432,13 @@
           "type": "number",
           "required": false,
           "system": false
+        },
+        {
+          "name": "meio_transporte",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["carro", "andando", "transporte_publico", "bicicleta"]
         }
       ],
       "indexes": []

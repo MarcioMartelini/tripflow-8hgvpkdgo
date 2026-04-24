@@ -35,6 +35,7 @@ export interface ItinerarioEvent {
   categoria_outro_descricao?: string
   latitude?: number
   longitude?: number
+  meio_transporte?: string
   expand?: any
 
   // Aliases for backward compatibility in some components
