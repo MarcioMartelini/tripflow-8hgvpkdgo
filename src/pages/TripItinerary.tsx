@@ -471,7 +471,12 @@ export default function TripItinerary() {
                 onEdit={setEventToEdit}
                 onDelete={setEventToDelete}
                 onAdd={() => setIsAddModalOpen(true)}
-                onPreview={(url: string, title: string) => setPreviewFile({ url, title })}
+                onPreview={(url: string, title: string) => {
+                  const finalUrl = url.includes('token=')
+                    ? url
+                    : `${url}${url.includes('?') ? '&' : '?'}token=${pb.authStore.token}`
+                  setPreviewFile({ url: finalUrl, title })
+                }}
                 onUpdateEvent={async (id, data) => {
                   setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)))
                   await updateItinerario(id, data)
@@ -490,7 +495,12 @@ export default function TripItinerary() {
                   setSelectedDate(d)
                   setViewMode('daily')
                 }}
-                onPreview={(url: string, title: string) => setPreviewFile({ url, title })}
+                onPreview={(url: string, title: string) => {
+                  const finalUrl = url.includes('token=')
+                    ? url
+                    : `${url}${url.includes('?') ? '&' : '?'}token=${pb.authStore.token}`
+                  setPreviewFile({ url: finalUrl, title })
+                }}
               />
             )}
             {viewMode === 'map' && (
@@ -498,7 +508,12 @@ export default function TripItinerary() {
                 events={filteredDailyEvents}
                 trip={trip}
                 onEditEvent={setEventToEdit}
-                onPreview={(url: string, title: string) => setPreviewFile({ url, title })}
+                onPreview={(url: string, title: string) => {
+                  const finalUrl = url.includes('token=')
+                    ? url
+                    : `${url}${url.includes('?') ? '&' : '?'}token=${pb.authStore.token}`
+                  setPreviewFile({ url: finalUrl, title })
+                }}
                 onUpdateEvent={async (id, data) => {
                   setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)))
                   await updateItinerario(id, data)
@@ -576,7 +591,12 @@ export default function TripItinerary() {
         tripId={trip.id}
         selectedDate={selectedDate}
         initialData={eventToEdit}
-        onPreview={(url, title) => setPreviewFile({ url, title })}
+        onPreview={(url, title) => {
+          const finalUrl = url.includes('token=')
+            ? url
+            : `${url}${url.includes('?') ? '&' : '?'}token=${pb.authStore.token}`
+          setPreviewFile({ url: finalUrl, title })
+        }}
       />
 
       <AlertDialog open={!!eventToDelete} onOpenChange={(o) => !o && setEventToDelete(null)}>

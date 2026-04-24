@@ -443,7 +443,9 @@ export function ActivityModal({
                         variant="secondary"
                         size="sm"
                         onClick={() => {
-                          const url = pb.files.getURL(initialData, file)
+                          const url = pb.files.getURL(initialData, file, {
+                            token: pb.authStore.token,
+                          })
                           onPreview?.(url, file)
                         }}
                       >

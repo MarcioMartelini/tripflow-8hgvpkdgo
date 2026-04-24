@@ -132,7 +132,7 @@ export default function TripTicketsReservations() {
         const files = t.arquivo ? (Array.isArray(t.arquivo) ? t.arquivo : [t.arquivo]) : []
         files.forEach((f, i) => {
           tripFiles.push({
-            url: pb.files.getURL(t, f),
+            url: pb.files.getURL(t, f, { token: pb.authStore.token }),
             name: `Ticket_${t.tipo}_${t.id}_${i}.pdf`,
           })
         })
@@ -144,7 +144,7 @@ export default function TripTicketsReservations() {
         const files = r.arquivo ? (Array.isArray(r.arquivo) ? r.arquivo : [r.arquivo]) : []
         files.forEach((f, i) => {
           tripFiles.push({
-            url: pb.files.getURL(r, f),
+            url: pb.files.getURL(r, f, { token: pb.authStore.token }),
             name: `Reserva_${r.tipo}_${r.id}_${i}.pdf`,
           })
         })
@@ -158,7 +158,7 @@ export default function TripTicketsReservations() {
         const files = it.arquivos ? (Array.isArray(it.arquivos) ? it.arquivos : [it.arquivos]) : []
         files.forEach((f, i) => {
           tripFiles.push({
-            url: pb.files.getURL(it, f),
+            url: pb.files.getURL(it, f, { token: pb.authStore.token }),
             name: `Itinerario_${it.tipo}_${it.id}_${i}.pdf`,
           })
         })
@@ -170,7 +170,7 @@ export default function TripTicketsReservations() {
         const files = d.arquivos ? (Array.isArray(d.arquivos) ? d.arquivos : [d.arquivos]) : []
         files.forEach((f, i) => {
           tripFiles.push({
-            url: pb.files.getURL(d, f),
+            url: pb.files.getURL(d, f, { token: pb.authStore.token }),
             name: `Despesa_${d.categoria}_${d.id}_${i}.pdf`,
           })
         })
@@ -183,12 +183,11 @@ export default function TripTicketsReservations() {
       for (const d of doc) {
         if (d.arquivo) {
           tripFiles.push({
-            url: pb.files.getURL(d, d.arquivo),
+            url: pb.files.getURL(d, d.arquivo, { token: pb.authStore.token }),
             name: `Documento_${d.tipo}_${d.id}.pdf`,
           })
         }
       }
-
       if (tripFiles.length === 0) {
         toast({ title: 'Nenhum documento encontrado para esta viagem.', variant: 'destructive' })
         setDownloadingAll(false)

@@ -129,7 +129,7 @@ export function ReservaCard({ reserva, onEdit, onDelete, onPreview }: Props) {
                       size="sm"
                       className="h-8 text-xs"
                       onClick={() => {
-                        const url = pb.files.getURL(reserva, f)
+                        const url = pb.files.getURL(reserva, f, { token: pb.authStore.token })
                         onPreview(url, `Reserva - ${reserva.nome}`)
                       }}
                       aria-label={`Visualizar PDF de ${reserva.nome}`}

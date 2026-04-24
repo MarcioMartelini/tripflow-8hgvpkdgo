@@ -129,7 +129,7 @@ export function TicketCard({ ticket, onEdit, onDelete, onPreview }: Props) {
                       size="sm"
                       className="h-8 text-xs"
                       onClick={() => {
-                        const url = pb.files.getURL(ticket, f)
+                        const url = pb.files.getURL(ticket, f, { token: pb.authStore.token })
                         onPreview(
                           url,
                           `Ticket - ${ticket.origem || 'Origem'} para ${ticket.destino || 'Destino'}`,
