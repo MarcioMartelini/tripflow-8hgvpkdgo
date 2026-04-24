@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Search, MapPin, Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,47 @@ export function ActivityModal({
   const [existingFiles, setExistingFiles] = useState<string[]>([])
   const [newFiles, setNewFiles] = useState<File[]>([])
   const [filesToRemove, setFilesToRemove] = useState<string[]>([])
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [showResults, setShowResults] = useState(false)
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.length > 2) {
+        setIsSearching(true)
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`,
+          )
+          const data = await res.json()
+          setSearchResults(data)
+          setShowResults(true)
+        } catch (e) {
+          console.error(e)
+        } finally {
+          setIsSearching(false)
+        }
+      } else {
+        setSearchResults([])
+        setShowResults(false)
+      }
+    }, 500)
+
+    return () => clearTimeout(delayDebounceFn)
+  }, [searchQuery])
+
+  const handleSelectLocation = (result: any) => {
+    setForm({
+      ...form,
+      local: result.display_name,
+      latitude: result.lat,
+      longitude: result.lon,
+    })
+    setSearchQuery('')
+    setShowResults(false)
+  }
 
   const [form, setForm] = useState({
     data: '',
@@ -276,8 +318,42 @@ export function ActivityModal({
               onChange={(e) => setForm({ ...form, atividade: e.target.value })}
             />
           </div>
+
+          <div className="space-y-2 relative">
+            <Label>Buscar Localização (Auto-preencher)</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Digite um endereço ou local para buscar..."
+                className="pl-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => {
+                  if (searchResults.length > 0) setShowResults(true)
+                }}
+              />
+              {isSearching && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-slate-400" />
+              )}
+            </div>
+            {showResults && searchResults.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                {searchResults.map((res: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="px-3 py-2 hover:bg-slate-100 cursor-pointer flex items-start gap-2 text-sm"
+                    onClick={() => handleSelectLocation(res)}
+                  >
+                    <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-slate-500" />
+                    <span className="line-clamp-2">{res.display_name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="local">Local (Opcional)</Label>
+            <Label htmlFor="local">Local (Manual/Nome de exibição)</Label>
             <Input
               id="local"
               placeholder="Ex: Centro Histórico"

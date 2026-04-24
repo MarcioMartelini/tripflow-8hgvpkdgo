@@ -7,6 +7,7 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Calendar } from '@/components/ui/calendar'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
@@ -28,6 +29,7 @@ import {
   AlertTriangle,
   Printer,
   Map as MapIcon,
+  Navigation,
 } from 'lucide-react'
 import { format, parseISO, isSameDay, eachDayOfInterval, addDays, startOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -56,6 +58,17 @@ export default function TripItinerary() {
   const [eventToEdit, setEventToEdit] = useState<ItinerarioEvent | null>(null)
   const [eventToDelete, setEventToDelete] = useState<ItinerarioEvent | null>(null)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+
+  const CATEGORIES = [
+    { id: 'hospedagem', label: 'Hospedagem' },
+    { id: 'transporte', label: 'Transporte' },
+    { id: 'alimentação', label: 'Alimentação' },
+    { id: 'atividade', label: 'Atividade' },
+    { id: 'compras', label: 'Compras' },
+    { id: 'outro', label: 'Outro' },
+  ]
 
   const handleGeneratePDF = async () => {
     try {
@@ -159,6 +172,44 @@ export default function TripItinerary() {
     const selectedDateString = format(selectedDate, 'yyyy-MM-dd')
     return events.filter((e) => e.data.substring(0, 10) === selectedDateString)
   }, [events, selectedDate])
+
+  const filteredDailyEvents = useMemo(() => {
+    let filtered = dailyEvents
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter((e) => selectedCategories.includes(e.categoria || 'outro'))
+    }
+    return filtered
+  }, [dailyEvents, selectedCategories])
+
+  const handleNavigate = () => {
+    const eventsWithCoords = filteredDailyEvents
+      .filter((e) => e.latitude && e.longitude)
+      .sort((a, b) => (a.hora_inicio || '24:00').localeCompare(b.hora_inicio || '24:00'))
+
+    if (eventsWithCoords.length === 0) {
+      toast({ title: 'Nenhum local com coordenadas para navegar.', variant: 'destructive' })
+      return
+    }
+
+    if (eventsWithCoords.length === 1) {
+      window.open(
+        `https://www.google.com/maps/search/?api=1&query=${eventsWithCoords[0].latitude},${eventsWithCoords[0].longitude}`,
+        '_blank',
+      )
+      return
+    }
+
+    const origin = `${eventsWithCoords[0].latitude},${eventsWithCoords[0].longitude}`
+    const destination = `${eventsWithCoords[eventsWithCoords.length - 1].latitude},${eventsWithCoords[eventsWithCoords.length - 1].longitude}`
+
+    const waypoints = eventsWithCoords
+      .slice(1, -1)
+      .map((e) => `${e.latitude},${e.longitude}`)
+      .join('|')
+
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}`
+    window.open(url, '_blank')
+  }
 
   if (loading) {
     return (
@@ -276,7 +327,7 @@ export default function TripItinerary() {
           {/* Action Bar */}
           <div
             className={cn(
-              'flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm',
+              'flex flex-col sm:flex-row sm:justify-between sm:items-center bg-white p-4 rounded-lg border shadow-sm gap-4 sm:gap-0',
             )}
           >
             <div>
@@ -288,18 +339,61 @@ export default function TripItinerary() {
               )}
               {viewMode === 'map' && <p className="text-sm text-slate-500">Visualização no Mapa</p>}
             </div>
-            <Button className="print-hidden" onClick={() => setIsAddModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              <span className="hidden sm:inline">Adicionar Atividade</span>
-              <span className="sm:hidden">Adicionar</span>
-            </Button>
+            <div className="flex gap-2 print-hidden w-full sm:w-auto">
+              {(viewMode === 'daily' || viewMode === 'map') && (
+                <Button
+                  variant="secondary"
+                  onClick={handleNavigate}
+                  className="flex-1 sm:flex-none"
+                >
+                  <Navigation className="w-4 h-4 mr-2" />
+                  Navegar
+                </Button>
+              )}
+              <Button onClick={() => setIsAddModalOpen(true)} className="flex-1 sm:flex-none">
+                <Plus className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Adicionar Atividade</span>
+                <span className="sm:hidden">Adicionar</span>
+              </Button>
+            </div>
           </div>
+
+          {/* Category Filters */}
+          {(viewMode === 'daily' || viewMode === 'map') && (
+            <div className="bg-white p-3 sm:p-4 rounded-lg border shadow-sm print-hidden flex flex-wrap gap-2 items-center">
+              <span className="text-sm font-medium text-slate-500 mr-1">Filtros:</span>
+              {CATEGORIES.map((cat) => (
+                <Badge
+                  key={cat.id}
+                  variant={selectedCategories.includes(cat.id) ? 'default' : 'outline'}
+                  className="cursor-pointer hover:bg-slate-100 hover:text-slate-900 transition-colors"
+                  onClick={() => {
+                    setSelectedCategories((prev) =>
+                      prev.includes(cat.id) ? prev.filter((c) => c !== cat.id) : [...prev, cat.id],
+                    )
+                  }}
+                >
+                  {cat.label}
+                </Badge>
+              ))}
+              {selectedCategories.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedCategories([])}
+                  className="h-6 px-2 text-xs ml-auto text-slate-500 hover:text-slate-900"
+                >
+                  Limpar Filtros
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* Views */}
           <div className="flex-1 bg-white p-4 sm:p-6 rounded-lg border shadow-sm print-hidden z-0">
             {viewMode === 'daily' && (
               <TimelineView
-                events={dailyEvents}
+                events={filteredDailyEvents}
                 onEdit={setEventToEdit}
                 onDelete={setEventToDelete}
                 onAdd={() => setIsAddModalOpen(true)}
@@ -316,7 +410,7 @@ export default function TripItinerary() {
               />
             )}
             {viewMode === 'map' && (
-              <MapView events={dailyEvents} trip={trip} onEditEvent={setEventToEdit} />
+              <MapView events={filteredDailyEvents} trip={trip} onEditEvent={setEventToEdit} />
             )}
           </div>
 
