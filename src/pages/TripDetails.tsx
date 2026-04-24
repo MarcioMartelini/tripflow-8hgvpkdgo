@@ -48,20 +48,6 @@ export default function TripDetails() {
   const [openTravelerModal, setOpenTravelerModal] = useState(false)
   const [travelerLoading, setTravelerLoading] = useState(false)
   const [tForm, setTForm] = useState({ nome: '', email: '', documento: '' })
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
-
-  const handleGeneratePDF = async () => {
-    try {
-      setIsGeneratingPDF(true)
-      const { generatePDF } = await import('@/lib/pdf-utils')
-      await generatePDF('pdf-content', `Relatorio_Viagem_${trip?.title || 'Detalhes'}`)
-      toast({ title: 'PDF gerado com sucesso!' })
-    } catch (err) {
-      toast({ title: 'Erro ao gerar PDF', variant: 'destructive' })
-    } finally {
-      setIsGeneratingPDF(false)
-    }
-  }
 
   const loadData = async () => {
     if (!id) return
@@ -153,8 +139,10 @@ export default function TripDetails() {
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Viagens
           </Link>
         </Button>
-        <Button onClick={handleGeneratePDF} variant="outline" disabled={isGeneratingPDF}>
-          <Printer className="h-4 w-4 mr-2" /> {isGeneratingPDF ? 'Gerando...' : 'Gerar PDF'}
+        <Button variant="outline" asChild>
+          <Link to={`/trips/${trip.id}/report?export=true`}>
+            <Printer className="h-4 w-4 mr-2" /> Exportar Relatório
+          </Link>
         </Button>
       </div>
       <div>

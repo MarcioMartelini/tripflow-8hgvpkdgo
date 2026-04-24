@@ -94,7 +94,8 @@ cronAdd('check_alerts', '*/5 * * * *', () => {
       if (data && horaInicio) {
         const actTime = new Date(`${data}T${horaInicio}:00Z`)
         const diffMs = actTime.getTime() - now.getTime()
-        if (diffMs > 0.25 * 60 * 60 * 1000 && diffMs <= 0.55 * 60 * 60 * 1000) {
+        // 1 hour before (between 0.75 and 1.05 hours)
+        if (diffMs > 0.75 * 60 * 60 * 1000 && diffMs <= 1.05 * 60 * 60 * 1000) {
           try {
             const trip = $app.findRecordById('trips', a.getString('viagem_id'))
             const nome = a.getString('atividade') || 'Cristo Redentor'
@@ -102,7 +103,7 @@ cronAdd('check_alerts', '*/5 * * * *', () => {
               trip.getString('owner_id'),
               trip.id,
               'atividade',
-              `Atividade ${nome} começa em 30 minutos`,
+              `Lembrete: A atividade '${nome}' começa em 1 hora.`,
             )
           } catch (_) {}
         }

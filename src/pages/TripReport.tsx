@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useLocation } from 'react-router-dom'
 import { getTrip, Trip } from '@/services/trips'
 import { getTravelers, Traveler } from '@/services/travelers'
 import { getItinerarioByTrip, ItinerarioEvent } from '@/services/itinerario'
 import { getOrcamentos, getDespesas, OrcamentoPlanejado, Despesa } from '@/services/finances'
 import { getTripDocuments, Documento } from '@/services/documentos'
+import { getTickets, Ticket } from '@/services/tickets'
+import { getReservas, Reserva } from '@/services/reservas'
 import { calculateBudgetData } from '@/lib/budget-utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -37,6 +39,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Info,
+  Plane,
+  Bed,
 } from 'lucide-react'
 import { format, differenceInDays, isBefore, addDays, parseISO, isValid } from 'date-fns'
 import { useAuth } from '@/hooks/use-auth'
@@ -65,6 +69,7 @@ export default function TripReport() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const { toast } = useToast()
+  const location = useLocation()
 
   const [trip, setTrip] = useState<Trip | null>(null)
   const [travelers, setTravelers] = useState<Traveler[]>([])
@@ -72,23 +77,29 @@ export default function TripReport() {
   const [orcamentos, setOrcamentos] = useState<OrcamentoPlanejado[]>([])
   const [despesas, setDespesas] = useState<Despesa[]>([])
   const [documents, setDocuments] = useState<Documento[]>([])
+  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [reservas, setReservas] = useState<Reserva[]>([])
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [autoExported, setAutoExported] = useState(false)
 
   const loadData = async () => {
     if (!id) return
     try {
       setLoading(true)
-      const [tripData, travelersData, itineraryData, orcs, desps, docs] = await Promise.all([
-        getTrip(id),
-        getTravelers(id),
-        getItinerarioByTrip(id),
-        getOrcamentos(id),
-        getDespesas(id),
-        getTripDocuments(id),
-      ])
+      const [tripData, travelersData, itineraryData, orcs, desps, docs, ticks, resvs] =
+        await Promise.all([
+          getTrip(id),
+          getTravelers(id),
+          getItinerarioByTrip(id),
+          getOrcamentos(id),
+          getDespesas(id),
+          getTripDocuments(id),
+          getTickets(id),
+          getReservas(id),
+        ])
 
       setTrip(tripData)
       setTravelers(travelersData)
@@ -96,6 +107,8 @@ export default function TripReport() {
       setOrcamentos(orcs)
       setDespesas(desps)
       setDocuments(docs)
+      setTickets(ticks)
+      setReservas(resvs)
 
       setError(false)
     } catch (err) {
@@ -179,6 +192,18 @@ export default function TripReport() {
     }
   }
 
+  useEffect(() => {
+    if (!loading && !error && trip && !autoExported) {
+      const searchParams = new URLSearchParams(location.search)
+      if (searchParams.get('export') === 'true') {
+        setAutoExported(true)
+        setTimeout(() => {
+          handleGeneratePDF()
+        }, 1500)
+      }
+    }
+  }, [loading, error, trip, autoExported, location.search])
+
   if (loading) {
     return (
       <div className="container py-8 px-4 max-w-6xl mx-auto space-y-8">
@@ -234,11 +259,12 @@ export default function TripReport() {
           </Button>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => window.print()}>
+          <Button variant="outline" onClick={() => window.print()} className="print-hidden">
             <Printer className="mr-2 h-4 w-4" /> Imprimir
           </Button>
-          <Button onClick={handleGeneratePDF} disabled={isGenerating}>
-            <FileText className="mr-2 h-4 w-4" /> {isGenerating ? 'Gerando...' : 'Gerar PDF'}
+          <Button onClick={handleGeneratePDF} disabled={isGenerating} className="print-hidden">
+            <FileText className="mr-2 h-4 w-4" />{' '}
+            {isGenerating ? 'Gerando...' : 'Exportar Relatório'}
           </Button>
         </div>
       </div>
@@ -313,7 +339,118 @@ export default function TripReport() {
           </Card>
         </section>
 
-        {/* Section 2: Itinerary */}
+        {trip.descricao && (
+          <section className="space-y-2 break-inside-avoid">
+            <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2">
+              <Info className="h-5 w-5 text-slate-500" />
+              Descrição da Viagem
+            </h2>
+            <p className="text-slate-700 whitespace-pre-wrap">{trip.descricao}</p>
+          </section>
+        )}
+
+        {/* Section Transportes */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
+            <Plane className="h-5 w-5 text-slate-500" />
+            Transporte
+          </h2>
+          {tickets.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+              Nenhum transporte registrado
+            </div>
+          ) : (
+            <div className="border border-slate-200 rounded-lg overflow-x-auto">
+              <Table className="min-w-[700px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Companhia</TableHead>
+                    <TableHead>Origem ➔ Destino</TableHead>
+                    <TableHead>Partida</TableHead>
+                    <TableHead>Chegada</TableHead>
+                    <TableHead>Confirmação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tickets.map((t) => (
+                    <TableRow key={t.id} className="break-inside-avoid">
+                      <TableCell className="capitalize font-medium text-slate-700">
+                        {t.tipo}
+                      </TableCell>
+                      <TableCell>{t.companhia || '-'}</TableCell>
+                      <TableCell>
+                        {t.origem || '-'} {t.destino ? `➔ ${t.destino}` : ''}
+                      </TableCell>
+                      <TableCell>
+                        {formatDate(t.data_saida)} {t.hora_saida || ''}
+                      </TableCell>
+                      <TableCell>
+                        {formatDate(t.data_chegada)} {t.hora_chegada || ''}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {t.numero_confirmacao || '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </section>
+
+        {/* Section Reservas */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
+            <Bed className="h-5 w-5 text-slate-500" />
+            Acomodação & Refeições
+          </h2>
+          {reservas.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+              Nenhuma reserva registrada
+            </div>
+          ) : (
+            <div className="border border-slate-200 rounded-lg overflow-x-auto">
+              <Table className="min-w-[700px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Nome/Local</TableHead>
+                    <TableHead>Check-in / Data</TableHead>
+                    <TableHead>Check-out</TableHead>
+                    <TableHead>Confirmação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reservas.map((r) => (
+                    <TableRow key={r.id} className="break-inside-avoid">
+                      <TableCell className="capitalize font-medium text-slate-700">
+                        {r.tipo}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{r.nome}</div>
+                        {r.local && <div className="text-xs text-slate-500">{r.local}</div>}
+                      </TableCell>
+                      <TableCell>
+                        {formatDate(r.data_checkin)} {r.hora_checkin || ''}
+                      </TableCell>
+                      <TableCell>
+                        {r.data_checkout
+                          ? `${formatDate(r.data_checkout)} ${r.hora_checkout || ''}`
+                          : '-'}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {r.numero_confirmacao || '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </section>
+
+        {/* Section Itinerary */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
             <MapPin className="h-5 w-5 text-slate-500" />
@@ -332,7 +469,7 @@ export default function TripReport() {
                     <TableHead>Hora</TableHead>
                     <TableHead>Atividade</TableHead>
                     <TableHead>Local</TableHead>
-                    <TableHead>Tipo</TableHead>
+                    <TableHead>Notas</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -349,8 +486,11 @@ export default function TripReport() {
                         </TableCell>
                         <TableCell className="font-medium">{ev.atividade}</TableCell>
                         <TableCell className="text-slate-600">{ev.local || '-'}</TableCell>
-                        <TableCell className="capitalize text-slate-600">
-                          {ev.tipo || '-'}
+                        <TableCell
+                          className="text-slate-600 text-sm max-w-[200px] truncate"
+                          title={ev.notas}
+                        >
+                          {ev.notas || '-'}
                         </TableCell>
                         <TableCell>
                           <span
@@ -371,7 +511,7 @@ export default function TripReport() {
           )}
         </section>
 
-        {/* Section 3: Budget */}
+        {/* Section Budget */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
             <AlertCircle className="h-5 w-5 text-slate-500" />
@@ -497,7 +637,7 @@ export default function TripReport() {
           </div>
         </section>
 
-        {/* Section 4: Documents */}
+        {/* Section Documents */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
             <FileText className="h-5 w-5 text-slate-500" />

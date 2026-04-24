@@ -11,7 +11,6 @@ import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Printer, AlertCircle } from 'lucide-react'
-import { generatePDF } from '@/lib/pdf-utils'
 import { calculateBudgetData } from '@/lib/budget-utils'
 import { SummaryCards } from '@/components/trip-budget/SummaryCards'
 import { ComparativeChart } from '@/components/trip-budget/ComparativeChart'
@@ -24,19 +23,7 @@ export default function TripBudget() {
   const { toast } = useToast()
 
   const [trip, setTrip] = useState<Trip | null>(null)
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
-  const handleGeneratePDF = async () => {
-    try {
-      setIsGeneratingPDF(true)
-      await generatePDF('pdf-content', `Relatorio_Viagem_${trip?.title || 'Orcamento'}`)
-      toast({ title: 'PDF gerado com sucesso!' })
-    } catch (err) {
-      toast({ title: 'Erro ao gerar PDF', variant: 'destructive' })
-    } finally {
-      setIsGeneratingPDF(false)
-    }
-  }
   const baseCurrency = trip?.moeda || user?.moeda_padrao || 'BRL'
   const [orcamentos, setOrcamentos] = useState<OrcamentoPlanejado[]>([])
   const [despesas, setDespesas] = useState<Despesa[]>([])
@@ -126,13 +113,10 @@ export default function TripBudget() {
           <h1 className="text-3xl font-bold text-slate-900">Orçamento de {trip.title}</h1>
           <p className="text-sm text-muted-foreground">Moeda base: {baseCurrency}</p>
         </div>
-        <Button
-          onClick={handleGeneratePDF}
-          variant="outline"
-          className="print-hidden"
-          disabled={isGeneratingPDF}
-        >
-          <Printer className="h-4 w-4 mr-2" /> {isGeneratingPDF ? 'Gerando...' : 'Gerar PDF'}
+        <Button variant="outline" className="print-hidden" asChild>
+          <Link to={`/trips/${tripId}/report?export=true`}>
+            <Printer className="h-4 w-4 mr-2" /> Exportar Relatório
+          </Link>
         </Button>
       </div>
 
