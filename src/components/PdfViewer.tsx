@@ -105,7 +105,7 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
         <iframe
           src={finalUrl}
           title={title}
-          className="w-full h-full flex-1 border-0 bg-white"
+          className="w-full h-full min-h-[70vh] flex-1 border-0 bg-white"
           width="100%"
           height="100%"
           onLoad={handleLoad}
