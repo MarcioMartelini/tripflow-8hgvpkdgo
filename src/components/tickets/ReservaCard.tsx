@@ -1,5 +1,6 @@
 import { Reserva, deleteReserva } from '@/services/reservas'
-import { Hotel, Utensils, Compass, CalendarDays, Edit, Trash2 } from 'lucide-react'
+import { Hotel, Utensils, Compass, CalendarDays, Edit, Trash2, FileText } from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -106,14 +107,28 @@ export function ReservaCard({ reserva, onEdit, onDelete }: Props) {
             {reserva.numero_confirmacao || '-'}
           </div>
 
-          <div className="pt-2 border-t mt-2">
-            <div className="font-medium text-lg">
-              {formatCurrency(price, reserva.moeda || 'BRL')}
-            </div>
-            {cPrice !== null && (
-              <div className="text-xs text-muted-foreground">
-                ≈ {formatCurrency(cPrice, userCurrency)}
+          <div className="pt-2 border-t mt-2 flex justify-between items-end">
+            <div>
+              <div className="font-medium text-lg">
+                {formatCurrency(price, reserva.moeda || 'BRL')}
               </div>
+              {cPrice !== null && (
+                <div className="text-xs text-muted-foreground">
+                  ≈ {formatCurrency(cPrice, userCurrency)}
+                </div>
+              )}
+            </div>
+            {reserva.arquivo && (
+              <Button variant="outline" size="sm" asChild className="h-8 text-xs">
+                <a
+                  href={pb.files.getURL(reserva, reserva.arquivo as string)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FileText className="h-3 w-3 mr-1" />
+                  PDF
+                </a>
+              </Button>
             )}
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { Ticket, deleteTicket } from '@/services/tickets'
-import { Plane, Train, Bus, Ticket as TicketIcon, Edit, Trash2 } from 'lucide-react'
+import { Plane, Train, Bus, Ticket as TicketIcon, Edit, Trash2, FileText } from 'lucide-react'
+import pb from '@/lib/pocketbase/client'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -106,14 +107,28 @@ export function TicketCard({ ticket, onEdit, onDelete }: Props) {
             {ticket.numero_confirmacao || '-'}
           </div>
 
-          <div className="pt-2 border-t mt-2">
-            <div className="font-medium text-lg">
-              {formatCurrency(price, ticket.moeda || 'BRL')}
-            </div>
-            {cPrice !== null && (
-              <div className="text-xs text-muted-foreground">
-                ≈ {formatCurrency(cPrice, userCurrency)}
+          <div className="pt-2 border-t mt-2 flex justify-between items-end">
+            <div>
+              <div className="font-medium text-lg">
+                {formatCurrency(price, ticket.moeda || 'BRL')}
               </div>
+              {cPrice !== null && (
+                <div className="text-xs text-muted-foreground">
+                  ≈ {formatCurrency(cPrice, userCurrency)}
+                </div>
+              )}
+            </div>
+            {ticket.arquivo && (
+              <Button variant="outline" size="sm" asChild className="h-8 text-xs">
+                <a
+                  href={pb.files.getURL(ticket, ticket.arquivo as string)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <FileText className="h-3 w-3 mr-1" />
+                  PDF
+                </a>
+              </Button>
             )}
           </div>
         </div>

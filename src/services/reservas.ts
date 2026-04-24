@@ -2,6 +2,8 @@ import pb from '@/lib/pocketbase/client'
 
 export interface Reserva {
   id: string
+  collectionId: string
+  collectionName: string
   viagem_id: string
   tipo: string
   nome: string
@@ -15,6 +17,7 @@ export interface Reserva {
   moeda?: string
   status?: string
   notas?: string
+  arquivo?: string | File | null
 }
 
 export const getReservas = async (tripId: string): Promise<Reserva[]> => {
@@ -24,11 +27,11 @@ export const getReservas = async (tripId: string): Promise<Reserva[]> => {
   })
 }
 
-export const createReserva = async (data: Partial<Reserva>): Promise<Reserva> => {
+export const createReserva = async (data: any): Promise<Reserva> => {
   return await pb.collection('reservas').create<Reserva>(data)
 }
 
-export const updateReserva = async (id: string, data: Partial<Reserva>): Promise<Reserva> => {
+export const updateReserva = async (id: string, data: any): Promise<Reserva> => {
   return await pb.collection('reservas').update<Reserva>(id, data)
 }
 

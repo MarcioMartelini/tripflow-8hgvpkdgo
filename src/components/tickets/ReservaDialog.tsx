@@ -261,6 +261,36 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
             />
           </div>
 
+          <div className="space-y-1 mt-2">
+            <Label>Anexo (PDF, max 5MB)</Label>
+            {formData.arquivo ? (
+              <div className="flex items-center justify-between p-2 border rounded-md bg-slate-50">
+                <span className="text-sm truncate mr-2">
+                  {typeof formData.arquivo === 'string'
+                    ? formData.arquivo
+                    : (formData.arquivo as File).name}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleChange('arquivo', '')}
+                >
+                  Remover
+                </Button>
+              </div>
+            ) : (
+              <Input
+                type="file"
+                accept="application/pdf"
+                onChange={(e: any) => handleChange('arquivo', e.target.files?.[0] || '')}
+              />
+            )}
+            {fieldErrors.arquivo && (
+              <p className="text-xs text-red-500 mt-1">{fieldErrors.arquivo}</p>
+            )}
+          </div>
+
           {error && <div className="text-sm text-red-500 font-medium">{error}</div>}
 
           <div className="flex justify-end gap-2 pt-4">
