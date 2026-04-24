@@ -58,31 +58,31 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
 
   const logoData = await getBase64ImageFromUrl(logoUrl)
 
-  const originalWidth = element.style.width
-  const originalMaxWidth = element.style.maxWidth
-  const originalMargin = element.style.margin
-
-  element.style.width = '1024px'
-  element.style.maxWidth = '1024px'
-  element.style.margin = '0'
+  const style = document.createElement('style')
+  style.id = 'pdf-export-style'
+  style.innerHTML = `
+    .pdf-export-mode { width: 1024px !important; max-width: 1024px !important; margin: 0 auto !important; padding: 20px !important; background: white !important; }
+    .pdf-export-mode .print-hidden { display: none !important; }
+    .pdf-export-mode .print-only { display: block !important; }
+    .pdf-export-mode .overflow-x-auto, 
+    .pdf-export-mode .overflow-y-auto, 
+    .pdf-export-mode .overflow-hidden { overflow: visible !important; max-height: none !important; }
+    .pdf-export-mode .shadow-sm, .pdf-export-mode .shadow-md { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+    .pdf-export-mode .truncate { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
+  `
+  document.head.appendChild(style)
+  element.classList.add('pdf-export-mode')
 
   const spacer = document.createElement('div')
-  spacer.style.height = '80px'
+  spacer.style.height = '60px'
   spacer.id = 'pdf-spacer'
   element.insertBefore(spacer, element.firstChild)
-
-  // Hide elements with 'print-hidden' class
-  const printHiddenElements = element.querySelectorAll('.print-hidden')
-  const originalDisplays: string[] = []
-  printHiddenElements.forEach((el: any, index) => {
-    originalDisplays[index] = el.style.display
-    el.style.display = 'none'
-  })
 
   const originalScrollY = window.scrollY
   window.scrollTo(0, 0)
 
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  // Wait for layout recalculation and re-rendering of visible components
+  await new Promise((resolve) => setTimeout(resolve, 800))
 
   const canvas = await window.html2canvas(element, {
     scale: 2,
@@ -95,18 +95,13 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
 
   window.scrollTo(0, originalScrollY)
 
-  element.style.width = originalWidth
-  element.style.maxWidth = originalMaxWidth
-  element.style.margin = originalMargin
+  element.classList.remove('pdf-export-mode')
+  const styleEl = document.getElementById('pdf-export-style')
+  if (styleEl) styleEl.remove()
 
   if (spacer.parentNode) {
     spacer.parentNode.removeChild(spacer)
   }
-
-  // Restore elements
-  printHiddenElements.forEach((el: any, index) => {
-    el.style.display = originalDisplays[index]
-  })
 
   const imgData = canvas.toDataURL('image/jpeg', 1.0)
   const { jsPDF } = window.jspdf

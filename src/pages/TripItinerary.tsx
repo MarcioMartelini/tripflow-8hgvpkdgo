@@ -239,7 +239,7 @@ export default function TripItinerary() {
           </div>
 
           {/* Views */}
-          <div className="flex-1 bg-white p-4 sm:p-6 rounded-lg border shadow-sm">
+          <div className="flex-1 bg-white p-4 sm:p-6 rounded-lg border shadow-sm print-hidden">
             {viewMode === 'daily' ? (
               <TimelineView
                 events={dailyEvents}
@@ -257,6 +257,57 @@ export default function TripItinerary() {
                 }}
               />
             )}
+          </div>
+
+          {/* Print Only Full Itinerary */}
+          <div className="hidden print-only mt-8">
+            <h2 className="text-2xl font-bold mb-6 border-b pb-2">Itinerário Completo</h2>
+            <div className="space-y-6">
+              {allTripDays.map((day) => {
+                const dayEvents = events.filter((e) =>
+                  isSameDay(new Date(e.data.substring(0, 10)), day),
+                )
+                if (dayEvents.length === 0) return null
+
+                // Sort by time
+                dayEvents.sort((a, b) =>
+                  (a.hora_inicio || '24:00').localeCompare(b.hora_inicio || '24:00'),
+                )
+
+                return (
+                  <div key={day.toISOString()} className="border rounded-lg overflow-hidden">
+                    <div className="bg-slate-100 p-3 font-bold border-b">
+                      {format(day, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                    </div>
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-white border-b">
+                        <tr>
+                          <th className="p-3 w-24">Horário</th>
+                          <th className="p-3">Atividade</th>
+                          <th className="p-3">Local</th>
+                          <th className="p-3">Tipo</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y bg-white">
+                        {dayEvents.map((ev) => (
+                          <tr key={ev.id}>
+                            <td className="p-3 font-medium text-slate-600 whitespace-nowrap">
+                              {ev.hora_inicio || '--:--'} {ev.hora_fim ? `às ${ev.hora_fim}` : ''}
+                            </td>
+                            <td className="p-3 font-semibold">{ev.atividade}</td>
+                            <td className="p-3 text-slate-600">{ev.local || '-'}</td>
+                            <td className="p-3 capitalize text-slate-600">{ev.tipo || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })}
+              {events.length === 0 && (
+                <p className="text-slate-500">Nenhuma atividade programada para esta viagem.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

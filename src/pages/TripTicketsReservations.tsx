@@ -346,42 +346,141 @@ export default function TripTicketsReservations() {
           </div>
         </div>
 
-        <TabsContent value="tickets" className="mt-0">
-          {filteredTickets.length === 0 ? (
-            renderEmptyState('tickets')
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredTickets.map((t) => (
-                <TicketCard
-                  key={t.id}
-                  ticket={t}
-                  onEdit={handleEditTicket}
-                  onDelete={loadData}
-                  onPreview={(url, title) => setPreviewFile({ url, title })}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
+        <div className="print-hidden">
+          <TabsContent value="tickets" className="mt-0">
+            {filteredTickets.length === 0 ? (
+              renderEmptyState('tickets')
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredTickets.map((t) => (
+                  <TicketCard
+                    key={t.id}
+                    ticket={t}
+                    onEdit={handleEditTicket}
+                    onDelete={loadData}
+                    onPreview={(url, title) => setPreviewFile({ url, title })}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
 
-        <TabsContent value="reservas" className="mt-0">
-          {filteredReservas.length === 0 ? (
-            renderEmptyState('reservas')
+          <TabsContent value="reservas" className="mt-0">
+            {filteredReservas.length === 0 ? (
+              renderEmptyState('reservas')
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredReservas.map((r) => (
+                  <ReservaCard
+                    key={r.id}
+                    reserva={r}
+                    onEdit={handleEditReserva}
+                    onDelete={loadData}
+                    onPreview={(url, title) => setPreviewFile({ url, title })}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </div>
+      </Tabs>
+
+      <div className="hidden print-only space-y-8">
+        <div>
+          <h2 className="text-xl font-bold border-b pb-2 mb-4">Tickets de Transporte</h2>
+          {tickets.length === 0 ? (
+            <p className="text-slate-500">Nenhum ticket registrado.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredReservas.map((r) => (
-                <ReservaCard
-                  key={r.id}
-                  reserva={r}
-                  onEdit={handleEditReserva}
-                  onDelete={loadData}
-                  onPreview={(url, title) => setPreviewFile({ url, title })}
-                />
-              ))}
+            <div className="border rounded-lg">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 border-b">
+                  <tr>
+                    <th className="p-3 font-semibold">Tipo</th>
+                    <th className="p-3 font-semibold">Origem - Destino</th>
+                    <th className="p-3 font-semibold">Saída</th>
+                    <th className="p-3 font-semibold">Chegada</th>
+                    <th className="p-3 font-semibold">Confirmação</th>
+                    <th className="p-3 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {tickets.map((t) => (
+                    <tr key={t.id}>
+                      <td className="p-3 capitalize">{t.tipo}</td>
+                      <td className="p-3">
+                        {t.origem || '-'} <br />
+                        &rarr; {t.destino || '-'}
+                      </td>
+                      <td className="p-3">
+                        {t.data_saida ? new Date(t.data_saida).toLocaleDateString('pt-BR') : '-'}{' '}
+                        {t.hora_saida}
+                      </td>
+                      <td className="p-3">
+                        {t.data_chegada
+                          ? new Date(t.data_chegada).toLocaleDateString('pt-BR')
+                          : '-'}{' '}
+                        {t.hora_chegada}
+                      </td>
+                      <td className="p-3">{t.numero_confirmacao || '-'}</td>
+                      <td className="p-3 capitalize">{t.status || 'pendente'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold border-b pb-2 mb-4">
+            Reservas (Hospedagem / Atividades)
+          </h2>
+          {reservas.length === 0 ? (
+            <p className="text-slate-500">Nenhuma reserva registrada.</p>
+          ) : (
+            <div className="border rounded-lg">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 border-b">
+                  <tr>
+                    <th className="p-3 font-semibold">Tipo</th>
+                    <th className="p-3 font-semibold">Nome / Local</th>
+                    <th className="p-3 font-semibold">Check-in</th>
+                    <th className="p-3 font-semibold">Check-out</th>
+                    <th className="p-3 font-semibold">Confirmação</th>
+                    <th className="p-3 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {reservas.map((r) => (
+                    <tr key={r.id}>
+                      <td className="p-3 capitalize">{r.tipo}</td>
+                      <td className="p-3 font-medium">
+                        {r.nome}
+                        <br />
+                        <span className="font-normal text-slate-500">{r.local}</span>
+                      </td>
+                      <td className="p-3">
+                        {r.data_checkin
+                          ? new Date(r.data_checkin).toLocaleDateString('pt-BR')
+                          : '-'}{' '}
+                        {r.hora_checkin}
+                      </td>
+                      <td className="p-3">
+                        {r.data_checkout
+                          ? new Date(r.data_checkout).toLocaleDateString('pt-BR')
+                          : '-'}{' '}
+                        {r.hora_checkout}
+                      </td>
+                      <td className="p-3">{r.numero_confirmacao || '-'}</td>
+                      <td className="p-3 capitalize">{r.status || 'pendente'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
 
       <TicketDialog
         open={ticketDialogOpen}

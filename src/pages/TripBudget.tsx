@@ -135,13 +135,118 @@ export default function TripBudget() {
 
       <SummaryCards data={categoryData} baseCurrency={baseCurrency} trip={trip} />
       <ComparativeChart data={categoryData} baseCurrency={baseCurrency} />
-      <PlanningTable
-        data={categoryData}
-        baseCurrency={baseCurrency}
-        tripId={tripId!}
-        onReload={loadData}
-      />
-      <ExpenseManager despesas={despesas} tripId={tripId!} onReload={loadData} />
+      <div className="print-hidden space-y-8">
+        <PlanningTable
+          data={categoryData}
+          baseCurrency={baseCurrency}
+          tripId={tripId!}
+          onReload={loadData}
+        />
+        <ExpenseManager despesas={despesas} tripId={tripId!} onReload={loadData} />
+      </div>
+
+      <div className="hidden print-only space-y-8 mt-8">
+        <div>
+          <h2 className="text-xl font-bold border-b pb-2 mb-4">Orçamento Planejado vs Realizado</h2>
+          <table className="w-full text-sm text-left border rounded-lg overflow-hidden">
+            <thead className="bg-slate-50 border-b">
+              <tr>
+                <th className="p-3">Categoria</th>
+                <th className="p-3 text-right">Planejado</th>
+                <th className="p-3 text-right">Realizado</th>
+                <th className="p-3 text-right">Diferença</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y bg-white">
+              {categoryData.map((cat) => (
+                <tr key={cat.category}>
+                  <td className="p-3 capitalize font-medium">{cat.category}</td>
+                  <td className="p-3 text-right">
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: baseCurrency,
+                    }).format(cat.planned)}
+                  </td>
+                  <td className="p-3 text-right">
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: baseCurrency,
+                    }).format(cat.realized)}
+                  </td>
+                  <td
+                    className={`p-3 text-right font-medium ${cat.diff < 0 ? 'text-red-600' : 'text-green-600'}`}
+                  >
+                    {new Intl.NumberFormat('pt-BR', {
+                      style: 'currency',
+                      currency: baseCurrency,
+                    }).format(cat.diff)}
+                  </td>
+                </tr>
+              ))}
+              <tr className="bg-slate-50 font-bold">
+                <td className="p-3">Total</td>
+                <td className="p-3 text-right">
+                  {new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: baseCurrency,
+                  }).format(categoryData.reduce((a, b) => a + b.planned, 0))}
+                </td>
+                <td className="p-3 text-right">
+                  {new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: baseCurrency,
+                  }).format(categoryData.reduce((a, b) => a + b.realized, 0))}
+                </td>
+                <td className="p-3 text-right">
+                  {new Intl.NumberFormat('pt-BR', {
+                    style: 'currency',
+                    currency: baseCurrency,
+                  }).format(categoryData.reduce((a, b) => a + b.diff, 0))}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold border-b pb-2 mb-4">Todas as Despesas Registradas</h2>
+          {despesas.length === 0 ? (
+            <p className="text-slate-500">Nenhuma despesa registrada.</p>
+          ) : (
+            <table className="w-full text-sm text-left border rounded-lg overflow-hidden">
+              <thead className="bg-slate-50 border-b">
+                <tr>
+                  <th className="p-3">Data</th>
+                  <th className="p-3">Descrição</th>
+                  <th className="p-3">Categoria</th>
+                  <th className="p-3 text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y bg-white">
+                {[...despesas]
+                  .sort((a, b) => ((a.data_despesa || '') > (b.data_despesa || '') ? -1 : 1))
+                  .map((d) => (
+                    <tr key={d.id}>
+                      <td className="p-3 whitespace-nowrap">
+                        {d.data_despesa
+                          ? new Date(d.data_despesa).toLocaleDateString('pt-BR')
+                          : '-'}
+                      </td>
+                      <td className="p-3 font-medium">{d.descricao || 'Sem descrição'}</td>
+                      <td className="p-3 capitalize">{d.categoria || '-'}</td>
+                      <td className="p-3 text-right font-medium">
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: d.moeda || 'BRL',
+                        }).format(d.valor)}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
