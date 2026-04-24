@@ -3,169 +3,176 @@ routerAdd(
   '/backend/v1/users/export-data',
   (e) => {
     const user = e.auth
-    if (!user) return e.unauthorizedError('Unauthorized')
+    if (!user) throw new UnauthorizedError('Authentication required')
 
     const userId = user.id
+    const db = $app
 
-    // Audit log
-    const audit = new Record($app.findCollectionByNameOrId('logs_auditoria'))
-    audit.set('usuario_id', userId)
-    audit.set('acao', 'portabilidade_dados')
-    audit.set('email', user.getString('email'))
-    $app.saveNoValidate(audit)
-
-    const safeDate = (d) => (d ? d.split(' ')[0] : '')
-    const safeNumber = (n) => Number(Number(n || 0).toFixed(2))
-
-    // Fetch data
-    const data = {
-      usuario: {
-        id: user.id,
-        nome: user.getString('name'),
+    const exportData = {
+      user: {
+        name: user.getString('name'),
         email: user.getString('email'),
-        moeda_padrao: user.getString('moeda_padrao') || 'BRL',
+        moeda_padrao: user.getString('moeda_padrao'),
       },
-      viagens: [],
-      viajantes: [],
-      itinerario: [],
-      documentos: [],
+      trips: [],
+      travelers: [],
+      itinerary: [],
+      documents: [],
       tickets: [],
-      reservas: [],
-      orcamento: [],
-      despesas: [],
-      comentarios: [],
-      alertas: [],
-      aviso:
-        'Documentos criptografados não foram inclusos. Para acessá-los, faça login no TripFlow',
-      nota_seguranca:
-        'Documentos criptografados não foram inclusos. Para acessá-los, faça login no TripFlow',
+      reservations: [],
+      budget_planned: [],
+      expenses: [],
+      interactions: {
+        comments: [],
+        alerts: [],
+      },
+      note: 'Documentos criptografados não foram inclusos. Para acessá-los, faça login no TripFlow',
     }
 
-    // Trips
-    const trips = $app.findRecordsByFilter('trips', `owner_id = '${userId}'`, '-created', 1000, 0)
-    const tripIds = trips.map((t) => t.id)
-
-    trips.forEach((t) => {
-      data.viagens.push({
-        id: t.id,
-        nome: t.getString('title'),
-        datas: `${safeDate(t.getString('start_date'))} a ${safeDate(t.getString('end_date'))}`,
-        destino: t.getString('destination'),
-        orcamento_total: safeNumber(t.get('budget_total')),
-      })
+    const trips = db.findRecordsByFilter('trips', 'owner_id = {:userId}', '-created', 0, 0, {
+      userId,
     })
+    exportData.trips = trips.map((t) => ({
+      id: t.id,
+      title: t.getString('title'),
+      destination: t.getString('destination'),
+      start_date: t.getString('start_date').split(' ')[0],
+      end_date: t.getString('end_date').split(' ')[0],
+      budget_total: t.get('budget_total'),
+    }))
 
-    if (tripIds.length > 0) {
-      const tripFilter = tripIds.map((id) => `viagem_id = '${id}'`).join(' || ')
+    const travelers = db.findRecordsByFilter(
+      'viajantes',
+      'viagem_id.owner_id = {:userId}',
+      '-created',
+      0,
+      0,
+      { userId },
+    )
+    exportData.travelers = travelers.map((t) => ({
+      name: t.getString('nome'),
+      email: t.getString('email'),
+      document: t.getString('documento'),
+    }))
 
-      // Travelers
-      const travelers = $app.findRecordsByFilter('viajantes', tripFilter, '', 1000, 0)
-      travelers.forEach((t) => {
-        data.viajantes.push({
-          nome: t.getString('nome'),
-          email: t.getString('email'),
-          documento: t.getString('documento'),
-        })
-      })
+    const itinerary = db.findRecordsByFilter(
+      'itinerario',
+      'viagem_id.owner_id = {:userId}',
+      '-created',
+      0,
+      0,
+      { userId },
+    )
+    exportData.itinerary = itinerary.map((i) => ({
+      date: i.getString('data').split(' ')[0],
+      time: i.getString('hora_inicio'),
+      activity: i.getString('atividade'),
+      location: i.getString('local'),
+      type: i.getString('tipo'),
+    }))
 
-      // Itinerary
-      const itinerary = $app.findRecordsByFilter('itinerario', tripFilter, 'data', 1000, 0)
-      itinerary.forEach((i) => {
-        data.itinerario.push({
-          data: safeDate(i.getString('data')),
-          hora_inicio: i.getString('hora_inicio'),
-          atividade: i.getString('atividade'),
-          local: i.getString('local'),
-          tipo: i.getString('tipo'),
-        })
-      })
-
-      // Tickets
-      const tickets = $app.findRecordsByFilter('tickets', tripFilter, 'data_saida', 1000, 0)
-      tickets.forEach((t) => {
-        data.tickets.push({
-          tipo: t.getString('tipo'),
-          origem: t.getString('origem'),
-          destino: t.getString('destino'),
-          data_saida: safeDate(t.getString('data_saida')),
-          data_chegada: safeDate(t.getString('data_chegada')),
-          preco: safeNumber(t.get('preco')),
-          moeda: t.getString('moeda'),
-        })
-      })
-
-      // Reservations
-      const reservations = $app.findRecordsByFilter('reservas', tripFilter, 'data_checkin', 1000, 0)
-      reservations.forEach((r) => {
-        data.reservas.push({
-          tipo: r.getString('tipo'),
-          nome: r.getString('nome'),
-          local: r.getString('local'),
-          data_checkin: safeDate(r.getString('data_checkin')),
-          data_checkout: safeDate(r.getString('data_checkout')),
-          preco: safeNumber(r.get('preco')),
-          moeda: r.getString('moeda'),
-        })
-      })
-
-      // Budget
-      const budget = $app.findRecordsByFilter('orcamento_planejado', tripFilter, '', 1000, 0)
-      budget.forEach((b) => {
-        data.orcamento.push({
-          categoria: b.getString('categoria'),
-          valor_planejado: safeNumber(b.get('valor_planejado')),
-          moeda: b.getString('moeda'),
-        })
-      })
-    }
-
-    // Documents (metadata)
-    const docsFilter = `usuario_id = '${userId}'`
-    const documents = $app.findRecordsByFilter('documentos', docsFilter, '', 1000, 0)
-    documents.forEach((d) => {
-      data.documentos.push({
-        tipo: d.getString('tipo'),
-        nome: d.getString('nome_arquivo_original') || d.getString('nome_arquivo'),
-        data_expiracao: safeDate(d.getString('data_expiracao')),
-        notas: d.getString('notas'),
-      })
+    const docs = db.findRecordsByFilter('documentos', 'usuario_id = {:userId}', '-created', 0, 0, {
+      userId,
     })
+    exportData.documents = docs.map((d) => ({
+      type: d.getString('tipo'),
+      file_name: d.getString('nome_arquivo_original') || d.getString('nome_arquivo'),
+      expiration_date: d.getString('data_expiracao').split(' ')[0],
+      notes: d.getString('notas'),
+    }))
 
-    // Expenses
-    const expensesFilter = `usuario_id = '${userId}'`
-    const expenses = $app.findRecordsByFilter('despesas', expensesFilter, 'data_despesa', 1000, 0)
-    expenses.forEach((e) => {
-      data.despesas.push({
-        categoria: e.getString('categoria'),
-        valor: safeNumber(e.get('valor')),
-        data_despesa: safeDate(e.getString('data_despesa')),
-        descricao: e.getString('descricao'),
-        moeda: e.getString('moeda'),
-      })
+    const tickets = db.findRecordsByFilter(
+      'tickets',
+      'viagem_id.owner_id = {:userId}',
+      '-created',
+      0,
+      0,
+      { userId },
+    )
+    exportData.tickets = tickets.map((t) => ({
+      type: t.getString('tipo'),
+      origin: t.getString('origem'),
+      destination: t.getString('destino'),
+      date: t.getString('data_saida').split(' ')[0],
+      price: t.get('preco'),
+      status: t.getString('status'),
+    }))
+
+    const reservations = db.findRecordsByFilter(
+      'reservas',
+      'viagem_id.owner_id = {:userId}',
+      '-created',
+      0,
+      0,
+      { userId },
+    )
+    exportData.reservations = reservations.map((r) => ({
+      type: r.getString('tipo'),
+      name: r.getString('nome'),
+      date: r.getString('data_checkin').split(' ')[0],
+      price: r.get('preco'),
+      status: r.getString('status'),
+    }))
+
+    const budget = db.findRecordsByFilter(
+      'orcamento_planejado',
+      'viagem_id.owner_id = {:userId}',
+      '-created',
+      0,
+      0,
+      { userId },
+    )
+    exportData.budget_planned = budget.map((b) => ({
+      category: b.getString('categoria'),
+      planned_value: b.get('valor_planejado'),
+      currency: b.getString('moeda'),
+    }))
+
+    const expenses = db.findRecordsByFilter(
+      'despesas',
+      'usuario_id = {:userId}',
+      '-created',
+      0,
+      0,
+      { userId },
+    )
+    exportData.expenses = expenses.map((e) => ({
+      category: e.getString('categoria'),
+      description: e.getString('descricao'),
+      value: e.get('valor'),
+      currency: e.getString('moeda'),
+      date: e.getString('data_despesa').split(' ')[0],
+    }))
+
+    const comments = db.findRecordsByFilter(
+      'comentarios',
+      'usuario_id = {:userId}',
+      '-created',
+      0,
+      0,
+      { userId },
+    )
+    exportData.interactions.comments = comments.map((c) => ({
+      text: c.getString('texto'),
+      timestamp: c.getString('created'),
+    }))
+
+    const alerts = db.findRecordsByFilter('alertas', 'usuario_id = {:userId}', '-created', 0, 0, {
+      userId,
     })
+    exportData.interactions.alerts = alerts.map((a) => ({
+      message: a.getString('mensagem'),
+      date: a.getString('data_alerta').split(' ')[0],
+    }))
 
-    // Comments
-    const commentsFilter = `usuario_id = '${userId}'`
-    const comments = $app.findRecordsByFilter('comentarios', commentsFilter, '-created', 1000, 0)
-    comments.forEach((c) => {
-      data.comentarios.push({
-        texto: c.getString('texto'),
-        created: c.getString('created'),
-      })
-    })
+    const logsCol = db.findCollectionByNameOrId('logs_auditoria')
+    const logRecord = new Record(logsCol)
+    logRecord.set('usuario_id', userId)
+    logRecord.set('acao', 'portabilidade_dados')
+    logRecord.set('email', user.getString('email'))
+    db.save(logRecord)
 
-    // Alerts
-    const alertsFilter = `usuario_id = '${userId}'`
-    const alerts = $app.findRecordsByFilter('alertas', alertsFilter, '-data_alerta', 1000, 0)
-    alerts.forEach((a) => {
-      data.alertas.push({
-        tipo: a.getString('tipo'),
-        mensagem: a.getString('mensagem'),
-        data_alerta: safeDate(a.getString('data_alerta')),
-      })
-    })
-
-    return e.json(200, data)
+    return e.json(200, exportData)
   },
   $apis.requireAuth(),
 )

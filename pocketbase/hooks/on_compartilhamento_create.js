@@ -1,29 +1,15 @@
 onRecordAfterCreateSuccess((e) => {
-  const logs = $app.findCollectionByNameOrId('logs_auditoria')
-  const logRecord = new Record(logs)
+  const db = $app
+  const logsCol = db.findCollectionByNameOrId('logs_auditoria')
+  const logRecord = new Record(logsCol)
   logRecord.set('usuario_id', e.record.getString('usuario_compartilhador'))
-  logRecord.set(
-    'acao',
-    'compartilhamento_documento: doc=' +
-      e.record.getString('documento_id') +
-      ' receptor=' +
-      e.record.getString('usuario_receptor'),
-  )
-  $app.save(logRecord)
+  logRecord.set('acao', 'compartilhamento_documento')
 
-  const alertas = $app.findCollectionByNameOrId('alertas')
-  const alerta = new Record(alertas)
-  alerta.set('usuario_id', e.record.getString('usuario_receptor'))
-  alerta.set('tipo', 'documento')
   try {
-    const sender = $app.findRecordById(
-      '_pb_users_auth_',
-      e.record.getString('usuario_compartilhador'),
-    )
-    alerta.set('mensagem', sender.getString('name') + ' compartilhou um documento com você')
-    alerta.set('lido', false)
-    $app.save(alerta)
+    const user = db.findRecordById('users', e.record.getString('usuario_compartilhador'))
+    logRecord.set('email', user.getString('email'))
   } catch (err) {}
 
+  db.save(logRecord)
   e.next()
 }, 'compartilhamento_documentos')

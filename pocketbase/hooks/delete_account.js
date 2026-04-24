@@ -3,110 +3,69 @@ routerAdd(
   '/backend/v1/users/delete-account',
   (e) => {
     const user = e.auth
-    if (!user) return e.unauthorizedError('Não autorizado')
+    if (!user) throw new UnauthorizedError('Authentication required')
 
     const body = e.requestInfo().body || {}
-    if (!body.password) {
-      return e.badRequestError('Senha é obrigatória', {
-        password: new ValidationError('validation_required', 'Senha é obrigatória'),
-      })
-    }
+    const password = body.password
+    if (!password) throw new BadRequestError('Senha é obrigatória')
 
-    const userEmail = user.getString('email')
-
-    // Verify password via internal API
-    let baseUrl = $secrets.get('PB_INSTANCE_URL')
-    if (!baseUrl) {
-      baseUrl = 'http://127.0.0.1:8080'
-    }
-    if (baseUrl.endsWith('/')) baseUrl = baseUrl.slice(0, -1)
-
-    const authRes = $http.send({
-      url: baseUrl + '/api/collections/users/auth-with-password',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identity: userEmail, password: body.password }),
-      timeout: 10,
-    })
-
-    if (authRes.statusCode !== 200) {
-      return e.badRequestError('Senha incorreta', {
+    if (!user.validatePassword(password)) {
+      throw new BadRequestError('Senha incorreta', {
         password: new ValidationError('invalid_password', 'Senha incorreta'),
       })
     }
 
-    $app.runInTransaction((txApp) => {
-      const deleteRecords = (collection, filter) => {
-        try {
-          const records = txApp.findRecordsByFilter(collection, filter, '', 10000, 0)
-          for (let i = 0; i < records.length; i++) {
-            txApp.delete(records[i])
-          }
-        } catch (err) {
-          // ignore if none found
+    const userId = user.id
+    const db = $app
+
+    const logsCol = db.findCollectionByNameOrId('logs_auditoria')
+    const logRecord = new Record(logsCol)
+    logRecord.set('usuario_id', userId)
+    logRecord.set('acao', 'direito_ao_esquecimento')
+    logRecord.set('email', user.getString('email'))
+    db.save(logRecord)
+
+    try {
+      db.runInTransaction((txApp) => {
+        const trips = txApp.findRecordsByFilter('trips', 'owner_id = {:userId}', '', 0, 0, {
+          userId,
+        })
+        for (const t of trips) {
+          txApp.delete(t)
         }
-      }
 
-      // 1. Fetch trips
-      let trips = []
-      try {
-        trips = txApp.findRecordsByFilter('trips', `owner_id = '${user.id}'`, '', 1000, 0)
-      } catch (err) {}
+        const docs = txApp.findRecordsByFilter('documentos', 'usuario_id = {:userId}', '', 0, 0, {
+          userId,
+        })
+        for (const d of docs) {
+          txApp.delete(d)
+        }
 
-      // 2. Delete data related to trips
-      for (let i = 0; i < trips.length; i++) {
-        const tripId = trips[i].id
-        deleteRecords('events', `trip_id = '${tripId}'`)
-        deleteRecords('viajantes', `viagem_id = '${tripId}'`)
-        deleteRecords('itinerario', `viagem_id = '${tripId}'`)
-        deleteRecords('tickets', `viagem_id = '${tripId}'`)
-        deleteRecords('reservas', `viagem_id = '${tripId}'`)
-        deleteRecords('orcamento_planejado', `viagem_id = '${tripId}'`)
-      }
+        const collections = [
+          'despesas',
+          'alertas',
+          'comentarios',
+          'chaves_usuario',
+          'sincronizacao_offline',
+          'conflitos_offline',
+          'compartilhamento_documentos',
+        ]
+        for (const coll of collections) {
+          const field =
+            coll === 'compartilhamento_documentos' ? 'usuario_compartilhador' : 'usuario_id'
+          const records = txApp.findRecordsByFilter(coll, field + ' = {:userId}', '', 0, 0, {
+            userId,
+          })
+          for (const r of records) {
+            txApp.delete(r)
+          }
+        }
 
-      // 3. Delete user direct data
-      const userFilter = `usuario_id = '${user.id}'`
-      deleteRecords('documentos', userFilter)
-      deleteRecords('despesas', userFilter)
-      deleteRecords('alertas', userFilter)
-      deleteRecords('comentarios', userFilter)
-      deleteRecords('sincronizacao_offline', userFilter)
-      deleteRecords('conflitos_offline', userFilter)
-      deleteRecords('chaves_usuario', userFilter)
-
-      // 4. Delete trips
-      for (let i = 0; i < trips.length; i++) {
-        txApp.delete(trips[i])
-      }
-
-      // 5. Create Audit Log
-      try {
-        const logsCol = txApp.findCollectionByNameOrId('logs_auditoria')
-        const logRecord = new Record(logsCol)
-        logRecord.set('usuario_id', user.id)
-        logRecord.set('email', userEmail)
-        logRecord.set('acao', 'direito_ao_esquecimento')
-        txApp.save(logRecord)
-      } catch (err) {
-        $app.logger().error('Falha ao salvar log de auditoria', 'error', err.message)
-      }
-
-      // 6. Delete user
-      txApp.delete(user)
-    })
-
-    // Log to simulate the email sending confirmation
-    $app
-      .logger()
-      .info(
-        'Email de confirmação enviado',
-        'to',
-        userEmail,
-        'subject',
-        'Sua conta foi deletada',
-        'action',
-        'direito_ao_esquecimento',
-      )
+        txApp.delete(user)
+      })
+    } catch (err) {
+      throw new InternalServerError('Erro ao deletar conta: ' + err.message)
+    }
 
     return e.json(200, { success: true })
   },

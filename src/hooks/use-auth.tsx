@@ -6,7 +6,7 @@ interface AuthContextType {
   signUp: (email: string, password: string) => Promise<{ error: any }>
   signIn: (email: string, password: string) => Promise<{ error: any }>
   changePassword: (oldPassword: string, newPassword: string) => Promise<{ error: any }>
-  signOut: () => void
+  signOut: () => Promise<void>
   loading: boolean
 }
 
@@ -65,7 +65,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const signOut = () => {
+  const signOut = async () => {
+    try {
+      if (pb.authStore.isValid) {
+        await pb.send('/backend/v1/users/logout', { method: 'POST' })
+      }
+    } catch (e) {
+      console.error(e)
+    }
     pb.authStore.clear()
   }
 

@@ -25,6 +25,16 @@ export const getSharedWithMe = async (): Promise<CompartilhamentoDocumento[]> =>
   })
 }
 
+export const getMyShares = async (): Promise<CompartilhamentoDocumento[]> => {
+  const user = pb.authStore.record
+  if (!user) return []
+  return await pb.collection('compartilhamento_documentos').getFullList<CompartilhamentoDocumento>({
+    filter: `usuario_compartilhador = "${user.id}"`,
+    expand: 'documento_id,usuario_receptor',
+    sort: '-created',
+  })
+}
+
 export const getSharesByDocument = async (
   documentId: string,
 ): Promise<CompartilhamentoDocumento[]> => {
