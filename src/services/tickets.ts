@@ -15,7 +15,7 @@ export interface Ticket {
   preco?: number
   moeda?: string
   status?: string
-  arquivo?: string
+  arquivo?: string[]
   categoria?: string
   categoria_outro_descricao?: string
 }

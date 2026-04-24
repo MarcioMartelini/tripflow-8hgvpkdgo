@@ -23,9 +23,10 @@ import { Despesa, createDespesa, updateDespesa, deleteDespesa } from '@/services
 import { CATEGORIAS, MOEDAS } from '@/lib/budget-utils'
 import { formatCurrency } from '@/lib/currency'
 import { format, parseISO } from 'date-fns'
-import { Edit2, Trash2, Plus, ArrowUpDown, Receipt } from 'lucide-react'
+import { Edit2, Trash2, Plus, ArrowUpDown, Receipt, FileText } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/use-auth'
+import pb from '@/lib/pocketbase/client'
 
 interface Props {
   despesas: Despesa[]
@@ -44,6 +45,10 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
+  const [existingFiles, setExistingFiles] = useState<string[]>([])
+  const [newFiles, setNewFiles] = useState<File[]>([])
+  const [filesToRemove, setFilesToRemove] = useState<string[]>([])
+
   const [form, setForm] = useState({
     data: '',
     categoria: '',
@@ -58,8 +63,8 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
     if (filterCat !== 'all') res = res.filter((d) => d.categoria === filterCat)
     res.sort((a, b) =>
       sortDesc
-        ? b.data_despesa.localeCompare(a.data_despesa)
-        : a.data_despesa.localeCompare(b.data_despesa),
+        ? b.data_despesa!.localeCompare(a.data_despesa!)
+        : a.data_despesa!.localeCompare(b.data_despesa!),
     )
     return res
   }, [despesas, filterCat, sortDesc])
@@ -72,6 +77,9 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
       valor: '',
       moeda: user?.moeda_padrao || 'BRL',
     })
+    setExistingFiles([])
+    setNewFiles([])
+    setFilesToRemove([])
     setEditingId(null)
     setFormError('')
     setModalOpen(true)
@@ -79,12 +87,15 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
 
   const openEdit = (d: Despesa) => {
     setForm({
-      data: d.data_despesa.split('T')[0],
+      data: d.data_despesa!.split('T')[0],
       categoria: d.categoria,
-      descricao: d.descricao,
+      descricao: d.descricao || '',
       valor: d.valor.toString(),
       moeda: d.moeda,
     })
+    setExistingFiles(d.arquivos ? (Array.isArray(d.arquivos) ? d.arquivos : [d.arquivos]) : [])
+    setNewFiles([])
+    setFilesToRemove([])
     setEditingId(d.id)
     setFormError('')
     setModalOpen(true)
@@ -100,20 +111,23 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
     if (isNaN(val) || val <= 0) return setFormError('Valor deve ser maior que 0.')
 
     try {
-      const payload = {
-        viagem_id: tripId,
-        usuario_id: user?.id,
-        categoria: form.categoria,
-        descricao: form.descricao,
-        valor: val,
-        moeda: form.moeda,
-        data_despesa: new Date(form.data).toISOString(),
-      }
+      const formDataObj = new FormData()
+      formDataObj.append('viagem_id', tripId)
+      if (user?.id) formDataObj.append('usuario_id', user.id)
+      formDataObj.append('categoria', form.categoria)
+      formDataObj.append('descricao', form.descricao)
+      formDataObj.append('valor', val.toString())
+      formDataObj.append('moeda', form.moeda)
+      formDataObj.append('data_despesa', new Date(form.data).toISOString())
+
+      newFiles.forEach((f) => formDataObj.append('arquivos', f))
+      filesToRemove.forEach((f) => formDataObj.append('arquivos-', f))
+
       if (editingId) {
-        await updateDespesa(editingId, payload)
+        await updateDespesa(editingId, formDataObj)
         toast({ title: 'Despesa atualizada com sucesso!' })
       } else {
-        await createDespesa(payload)
+        await createDespesa(formDataObj)
         toast({ title: 'Despesa adicionada com sucesso!' })
       }
       setModalOpen(false)
@@ -191,9 +205,31 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
               <TableBody>
                 {filtered.map((d) => (
                   <TableRow key={d.id}>
-                    <TableCell>{format(parseISO(d.data_despesa), 'dd/MM/yyyy')}</TableCell>
+                    <TableCell>{format(parseISO(d.data_despesa!), 'dd/MM/yyyy')}</TableCell>
                     <TableCell className="capitalize">{d.categoria}</TableCell>
-                    <TableCell>{d.descricao}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <span>{d.descricao}</span>
+                        {d.arquivos && d.arquivos.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {(Array.isArray(d.arquivos) ? d.arquivos : [d.arquivos]).map(
+                              (f, i, arr) => (
+                                <a
+                                  key={i}
+                                  href={pb.files.getURL(d, f)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center text-xs text-blue-600 hover:underline bg-blue-50 px-1.5 py-0.5 rounded"
+                                >
+                                  <FileText className="h-3 w-3 mr-1" />
+                                  PDF {arr.length > 1 ? i + 1 : ''}
+                                </a>
+                              ),
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCurrency(d.valor, d.moeda)}
                     </TableCell>
@@ -222,7 +258,7 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
       </CardContent>
 
       <Dialog open={isModalOpen} onOpenChange={setModalOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Editar' : 'Adicionar'} Despesa</DialogTitle>
           </DialogHeader>
@@ -291,6 +327,69 @@ export function ExpenseManager({ despesas, tripId, onReload }: Props) {
                 </Select>
               </div>
             </div>
+
+            <div className="space-y-2 mt-2">
+              <Label>Anexos (PDF)</Label>
+              <div className="space-y-2">
+                {existingFiles.map((file, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-2 border rounded-md bg-slate-50"
+                  >
+                    <span className="text-sm truncate mr-2">{file}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setExistingFiles((prev) => prev.filter((f) => f !== file))
+                        setFilesToRemove((prev) => [...prev, file])
+                      }}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                ))}
+                {newFiles.map((file, i) => (
+                  <div
+                    key={`new-${i}`}
+                    className="flex items-center justify-between p-2 border rounded-md bg-slate-50"
+                  >
+                    <span className="text-sm truncate mr-2">{file.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setNewFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Input
+                type="file"
+                accept="application/pdf"
+                multiple
+                onChange={(e: any) => {
+                  if (e.target.files) {
+                    const addedFiles = Array.from(e.target.files) as File[]
+                    const invalidFiles = addedFiles.filter((f) => f.type !== 'application/pdf')
+                    if (invalidFiles.length > 0) {
+                      toast({
+                        title: 'Formato inválido',
+                        description: 'Apenas arquivos PDF são permitidos.',
+                        variant: 'destructive',
+                      })
+                    } else {
+                      setNewFiles((prev) => [...prev, ...addedFiles])
+                    }
+                  }
+                  e.target.value = ''
+                }}
+              />
+            </div>
+
             {formError && <p className="text-sm text-red-500">{formError}</p>}
             <Button type="submit" className="w-full">
               Salvar

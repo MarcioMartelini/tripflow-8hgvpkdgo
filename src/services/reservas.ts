@@ -15,7 +15,7 @@ export interface Reserva {
   moeda?: string
   status?: string
   notas?: string
-  arquivo?: string
+  arquivo?: string[]
   categoria?: string
   categoria_outro_descricao?: string
 }

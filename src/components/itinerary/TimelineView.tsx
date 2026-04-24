@@ -85,18 +85,23 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
                 )}
                 {event.arquivos && event.arquivos.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {event.arquivos.map((arquivo, idx) => (
-                      <a
-                        key={idx}
-                        href={pb.files.getURL(event as any, arquivo)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs transition-colors border border-slate-200"
-                      >
-                        <FileText className="h-3.5 w-3.5 text-red-500" />
-                        <span className="truncate max-w-[150px]">{arquivo}</span>
-                      </a>
-                    ))}
+                    {(Array.isArray(event.arquivos) ? event.arquivos : [event.arquivos]).map(
+                      (arquivo, idx, arr) => (
+                        <a
+                          key={idx}
+                          href={pb.files.getURL(event as any, arquivo)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs transition-colors border border-slate-200"
+                          title={arquivo}
+                        >
+                          <FileText className="h-3.5 w-3.5 text-red-500" />
+                          <span className="truncate max-w-[150px]">
+                            PDF {arr.length > 1 ? idx + 1 : ''}
+                          </span>
+                        </a>
+                      ),
+                    )}
                   </div>
                 )}
               </div>

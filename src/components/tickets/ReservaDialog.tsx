@@ -46,6 +46,10 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<Partial<Reserva>>({})
 
+  const [existingFiles, setExistingFiles] = useState<string[]>([])
+  const [newFiles, setNewFiles] = useState<File[]>([])
+  const [filesToRemove, setFilesToRemove] = useState<string[]>([])
+
   useEffect(() => {
     if (open) {
       setError('')
@@ -56,9 +60,18 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
           moeda: 'BRL',
           status: 'confirmado',
           preco: 0,
-          categoria: 'hospedagem',
+          categoria: 'hospagem',
         },
       )
+      setExistingFiles(
+        reserva?.arquivo
+          ? Array.isArray(reserva.arquivo)
+            ? reserva.arquivo
+            : [reserva.arquivo]
+          : [],
+      )
+      setNewFiles([])
+      setFilesToRemove([])
     }
   }, [open, reserva])
 
@@ -116,10 +129,22 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
       finalData.categoria_outro_descricao = ''
     }
 
+    const submitData = new FormData()
+    submitData.append('viagem_id', tripId)
+
+    Object.entries(finalData).forEach(([key, value]) => {
+      if (key !== 'arquivo' && key !== 'expand' && value !== undefined && value !== null) {
+        submitData.append(key, value.toString())
+      }
+    })
+
+    newFiles.forEach((f) => submitData.append('arquivo', f))
+    filesToRemove.forEach((f) => submitData.append('arquivo-', f))
+
     setLoading(true)
     try {
-      if (reserva?.id) await updateReserva(reserva.id, finalData)
-      else await createReserva({ ...finalData, viagem_id: tripId } as Reserva)
+      if (reserva?.id) await updateReserva(reserva.id, submitData)
+      else await createReserva(submitData)
 
       toast({
         title: reserva ? 'Reserva atualizada com sucesso!' : 'Reserva adicionada com sucesso!',
@@ -310,31 +335,66 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
             />
           </div>
 
-          <div className="space-y-1 mt-2">
-            <Label>Anexo (PDF, max 5MB)</Label>
-            {formData.arquivo ? (
-              <div className="flex items-center justify-between p-2 border rounded-md bg-slate-50">
-                <span className="text-sm truncate mr-2">
-                  {typeof formData.arquivo === 'string'
-                    ? formData.arquivo
-                    : (formData.arquivo as File).name}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleChange('arquivo', '')}
+          <div className="space-y-2 mt-2">
+            <Label>Anexos (PDF)</Label>
+            <div className="space-y-2">
+              {existingFiles.map((file, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-2 border rounded-md bg-slate-50"
                 >
-                  Remover
-                </Button>
-              </div>
-            ) : (
-              <Input
-                type="file"
-                accept="application/pdf"
-                onChange={(e: any) => handleChange('arquivo', e.target.files?.[0] || '')}
-              />
-            )}
+                  <span className="text-sm truncate mr-2">{file}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setExistingFiles((prev) => prev.filter((f) => f !== file))
+                      setFilesToRemove((prev) => [...prev, file])
+                    }}
+                  >
+                    Remover
+                  </Button>
+                </div>
+              ))}
+              {newFiles.map((file, i) => (
+                <div
+                  key={`new-${i}`}
+                  className="flex items-center justify-between p-2 border rounded-md bg-slate-50"
+                >
+                  <span className="text-sm truncate mr-2">{file.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setNewFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                  >
+                    Remover
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <Input
+              type="file"
+              accept="application/pdf"
+              multiple
+              onChange={(e: any) => {
+                if (e.target.files) {
+                  const addedFiles = Array.from(e.target.files) as File[]
+                  const invalidFiles = addedFiles.filter((f) => f.type !== 'application/pdf')
+                  if (invalidFiles.length > 0) {
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      arquivo: 'Apenas arquivos PDF são permitidos.',
+                    }))
+                  } else {
+                    setNewFiles((prev) => [...prev, ...addedFiles])
+                    setFieldErrors((prev) => ({ ...prev, arquivo: '' }))
+                  }
+                }
+                e.target.value = ''
+              }}
+            />
             {fieldErrors.arquivo && (
               <p className="text-xs text-red-500 mt-1">{fieldErrors.arquivo}</p>
             )}

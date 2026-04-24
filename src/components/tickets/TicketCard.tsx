@@ -118,17 +118,23 @@ export function TicketCard({ ticket, onEdit, onDelete }: Props) {
                 </div>
               )}
             </div>
-            {ticket.arquivo && (
-              <Button variant="outline" size="sm" asChild className="h-8 text-xs">
-                <a
-                  href={pb.files.getURL(ticket, ticket.arquivo as string)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <FileText className="h-3 w-3 mr-1" />
-                  PDF
-                </a>
-              </Button>
+            {ticket.arquivo && ticket.arquivo.length > 0 && (
+              <div className="flex flex-wrap gap-2 justify-end">
+                {(Array.isArray(ticket.arquivo) ? ticket.arquivo : [ticket.arquivo]).map(
+                  (f, i, arr) => (
+                    <Button key={i} variant="outline" size="sm" asChild className="h-8 text-xs">
+                      <a
+                        href={pb.files.getURL(ticket, f)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <FileText className="h-3 w-3 mr-1" />
+                        PDF {arr.length > 1 ? i + 1 : ''}
+                      </a>
+                    </Button>
+                  ),
+                )}
+              </div>
             )}
           </div>
         </div>

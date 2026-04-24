@@ -17,6 +17,7 @@ export interface Despesa {
   valor: number
   moeda: string
   data_despesa?: string
+  arquivos?: string[]
 }
 
 export const getOrcamentos = async (tripId: string): Promise<OrcamentoPlanejado[]> => {
@@ -49,14 +50,23 @@ export const deleteOrcamento = async (id: string): Promise<void> => {
   await pb.collection('orcamento_planejado').delete(id)
 }
 
-export const createDespesa = async (data: Partial<Despesa>): Promise<Despesa> => {
-  if (!data.usuario_id && pb.authStore.record) {
-    data.usuario_id = pb.authStore.record.id
+export const createDespesa = async (data: Partial<Despesa> | FormData): Promise<Despesa> => {
+  if (data instanceof FormData) {
+    if (!data.has('usuario_id') && pb.authStore.record) {
+      data.append('usuario_id', pb.authStore.record.id)
+    }
+  } else {
+    if (!data.usuario_id && pb.authStore.record) {
+      data.usuario_id = pb.authStore.record.id
+    }
   }
   return await pb.collection('despesas').create<Despesa>(data)
 }
 
-export const updateDespesa = async (id: string, data: Partial<Despesa>): Promise<Despesa> => {
+export const updateDespesa = async (
+  id: string,
+  data: Partial<Despesa> | FormData,
+): Promise<Despesa> => {
   return await pb.collection('despesas').update<Despesa>(id, data)
 }
 

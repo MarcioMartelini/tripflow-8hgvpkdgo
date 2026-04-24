@@ -40,7 +40,10 @@ export function ActivityModal({
 }: ActivityModalProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [files, setFiles] = useState<File[]>([])
+  const [existingFiles, setExistingFiles] = useState<string[]>([])
+  const [newFiles, setNewFiles] = useState<File[]>([])
+  const [filesToRemove, setFilesToRemove] = useState<string[]>([])
+
   const [form, setForm] = useState({
     data: '',
     hora_inicio: '',
@@ -71,6 +74,13 @@ export function ActivityModal({
           categoria: initialData.categoria || 'atividade',
           categoria_outro_descricao: initialData.categoria_outro_descricao || '',
         })
+        setExistingFiles(
+          initialData.arquivos
+            ? Array.isArray(initialData.arquivos)
+              ? initialData.arquivos
+              : [initialData.arquivos]
+            : [],
+        )
       } else {
         setForm({
           data: format(selectedDate, 'yyyy-MM-dd'),
@@ -85,23 +95,15 @@ export function ActivityModal({
           categoria: 'atividade',
           categoria_outro_descricao: '',
         })
+        setExistingFiles([])
       }
-      setFiles([]) // Reset files on open
+      setNewFiles([])
+      setFilesToRemove([])
     }
   }, [isOpen, initialData, selectedDate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    const invalidFiles = files.filter((f) => f.type !== 'application/pdf')
-    if (invalidFiles.length > 0) {
-      toast({
-        title: 'Formato inválido',
-        description: 'Apenas arquivos PDF são permitidos.',
-        variant: 'destructive',
-      })
-      return
-    }
 
     if (form.hora_fim && form.hora_fim <= form.hora_inicio) {
       toast({
@@ -140,8 +142,11 @@ export function ActivityModal({
         form.categoria === 'outro' ? form.categoria_outro_descricao : '',
       )
 
-      files.forEach((file) => {
+      newFiles.forEach((file) => {
         formData.append('arquivos', file)
+      })
+      filesToRemove.forEach((file) => {
+        formData.append('arquivos-', file)
       })
 
       if (initialData) {
@@ -310,22 +315,69 @@ export function ActivityModal({
               onChange={(e) => setForm({ ...form, notas: e.target.value })}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="arquivos">Anexar Arquivos (PDF)</Label>
+
+          <div className="space-y-2 mt-2">
+            <Label>Anexos (PDF)</Label>
+            <div className="space-y-2">
+              {existingFiles.map((file, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-2 border rounded-md bg-slate-50"
+                >
+                  <span className="text-sm truncate mr-2">{file}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setExistingFiles((prev) => prev.filter((f) => f !== file))
+                      setFilesToRemove((prev) => [...prev, file])
+                    }}
+                  >
+                    Remover
+                  </Button>
+                </div>
+              ))}
+              {newFiles.map((file, i) => (
+                <div
+                  key={`new-${i}`}
+                  className="flex items-center justify-between p-2 border rounded-md bg-slate-50"
+                >
+                  <span className="text-sm truncate mr-2">{file.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setNewFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                  >
+                    Remover
+                  </Button>
+                </div>
+              ))}
+            </div>
             <Input
-              id="arquivos"
               type="file"
-              multiple
               accept="application/pdf"
-              onChange={(e) => setFiles(Array.from(e.target.files || []))}
+              multiple
+              onChange={(e: any) => {
+                if (e.target.files) {
+                  const addedFiles = Array.from(e.target.files) as File[]
+                  const invalidFiles = addedFiles.filter((f) => f.type !== 'application/pdf')
+                  if (invalidFiles.length > 0) {
+                    toast({
+                      title: 'Formato inválido',
+                      description: 'Apenas arquivos PDF são permitidos.',
+                      variant: 'destructive',
+                    })
+                  } else {
+                    setNewFiles((prev) => [...prev, ...addedFiles])
+                  }
+                }
+                e.target.value = ''
+              }}
             />
-            {initialData?.arquivos && initialData.arquivos.length > 0 && files.length === 0 && (
-              <p className="text-xs text-slate-500 mt-1">
-                {initialData.arquivos.length} arquivo(s) já anexado(s). Selecionar novos substituirá
-                os atuais.
-              </p>
-            )}
           </div>
+
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancelar
