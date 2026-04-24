@@ -214,40 +214,97 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
   return (
     <div className="animate-fade-in">
       {validCount >= 2 && (
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-4 rounded-lg mb-6 border gap-4">
-          <div className="flex flex-col gap-1">
-            <h4 className="font-semibold text-slate-800 flex items-center gap-2">
-              <Navigation className="w-4 h-4 text-indigo-500" />
-              Resumo da Rota do Dia
-            </h4>
-            <div className="flex items-center gap-4 text-sm text-slate-600 mt-1">
-              <span>
-                Distância Total:{' '}
-                <strong className="text-slate-900">{totalDistance.toFixed(1)} km</strong>
-              </span>
-              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-              <span>
-                Tempo Estimado:{' '}
-                <strong className="text-slate-900">{formatDuration(totalDuration)}</strong>
-              </span>
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-white p-4 sm:p-5 rounded-xl mb-6 border shadow-sm gap-4">
+          {totalDistance === 0 && totalDuration === 0 ? (
+            <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-sm border border-amber-200 w-full lg:w-auto flex-1">
+              Não foi possível calcular a rota para as localizações selecionadas. Verifique se os
+              endereços são válidos e acessíveis pelo transporte.
             </div>
+          ) : (
+            <div className="flex items-center w-full lg:w-auto">
+              <div className="flex flex-col flex-1 lg:flex-none">
+                <span
+                  className="text-[11px] font-semibold uppercase tracking-wide"
+                  style={{ color: '#54769F' }}
+                >
+                  DISTÂNCIA TOTAL
+                </span>
+                <span className="font-bold text-2xl text-slate-900 mt-0.5">
+                  {totalDistance > 0 ? `${totalDistance.toFixed(1)} km` : '--'}
+                </span>
+              </div>
+              <div className="h-10 w-px bg-slate-200 mx-4 sm:mx-6"></div>
+              <div className="flex flex-col flex-1 lg:flex-none">
+                <span
+                  className="text-[11px] font-semibold uppercase tracking-wide"
+                  style={{ color: '#54769F' }}
+                >
+                  TEMPO ESTIMADO
+                </span>
+                <span className="font-bold text-2xl text-slate-900 mt-0.5">
+                  {totalDuration > 0 ? formatDuration(totalDuration) : '--'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto mt-2 lg:mt-0">
+            <Select
+              value={validEvents[0]?.meio_transporte || 'carro'}
+              onValueChange={async (val) => {
+                try {
+                  await Promise.all(
+                    validEvents.map((ev) => {
+                      if (ev.meio_transporte !== val) {
+                        return updateItinerario(ev.id, { meio_transporte: val })
+                      }
+                    }),
+                  )
+                  toast({ title: 'Meio de transporte atualizado para o dia!' })
+                } catch (e) {
+                  toast({ title: 'Erro ao atualizar meio de transporte', variant: 'destructive' })
+                }
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-[180px] bg-slate-50 h-10">
+                <SelectValue placeholder="Meio de Transporte" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="carro">
+                  <div className="flex items-center gap-2">
+                    <Car className="h-4 w-4" /> Carro
+                  </div>
+                </SelectItem>
+                <SelectItem value="andando">
+                  <div className="flex items-center gap-2">
+                    <Footprints className="h-4 w-4" /> A Pé
+                  </div>
+                </SelectItem>
+                <SelectItem value="transporte_publico">
+                  <div className="flex items-center gap-2">
+                    <Train className="h-4 w-4" /> Público
+                  </div>
+                </SelectItem>
+                <SelectItem value="bicicleta">
+                  <div className="flex items-center gap-2">
+                    <Bike className="h-4 w-4" /> Bicicleta
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
             {validCount >= 3 && !suggestion && (
-              <p className="text-xs text-slate-500 mt-2">
-                Reordene as atividades geograficamente para economizar tempo e distância.
-              </p>
+              <Button
+                onClick={handleOptimize}
+                disabled={isOptimizing}
+                variant="outline"
+                className="shrink-0 bg-white h-10 w-full sm:w-auto"
+              >
+                <Route className="w-4 h-4 mr-2 text-indigo-500" />
+                {isOptimizing ? 'Calculando...' : 'Otimizar Rota'}
+              </Button>
             )}
           </div>
-          {validCount >= 3 && !suggestion && (
-            <Button
-              onClick={handleOptimize}
-              disabled={isOptimizing}
-              variant="outline"
-              className="shrink-0 bg-white"
-            >
-              <Route className="w-4 h-4 mr-2 text-indigo-500" />
-              {isOptimizing ? 'Calculando...' : 'Otimizar Rota'}
-            </Button>
-          )}
         </div>
       )}
 

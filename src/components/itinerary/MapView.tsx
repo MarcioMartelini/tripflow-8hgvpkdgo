@@ -423,71 +423,86 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
             </div>
 
             {activeRoute ? (
-              <>
-                <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border">
-                  <div className="flex flex-col">
-                    <span className="text-xs text-slate-500 font-medium uppercase">
-                      Distância Total
-                    </span>
-                    <span className="font-bold text-lg">{activeRoute.distance.toFixed(1)} km</span>
-                  </div>
-                  <div className="h-8 w-px bg-slate-200 mx-2"></div>
-                  <div className="flex flex-col">
-                    <span className="text-xs text-slate-500 font-medium uppercase">
-                      Tempo Estimado
-                    </span>
-                    <span className="font-bold text-lg">
-                      {formatDuration(activeRoute.duration)}
-                    </span>
-                  </div>
+              activeRoute.distance === 0 && activeRoute.duration === 0 ? (
+                <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-sm border border-amber-200 mt-2">
+                  Não foi possível calcular a rota para as localizações selecionadas. Verifique se
+                  os endereços são válidos e acessíveis.
                 </div>
+              ) : (
+                <>
+                  <div className="flex items-center bg-white p-4 rounded-xl border shadow-sm">
+                    <div className="flex flex-col flex-1">
+                      <span
+                        className="text-[10px] font-semibold uppercase tracking-wide"
+                        style={{ color: '#54769F' }}
+                      >
+                        DISTÂNCIA TOTAL
+                      </span>
+                      <span className="font-bold text-xl text-slate-900 mt-0.5">
+                        {activeRoute.distance > 0 ? `${activeRoute.distance.toFixed(1)} km` : '--'}
+                      </span>
+                    </div>
+                    <div className="h-10 w-px bg-slate-200 mx-3"></div>
+                    <div className="flex flex-col flex-1 pl-1">
+                      <span
+                        className="text-[10px] font-semibold uppercase tracking-wide"
+                        style={{ color: '#54769F' }}
+                      >
+                        TEMPO ESTIMADO
+                      </span>
+                      <span className="font-bold text-xl text-slate-900 mt-0.5">
+                        {activeRoute.duration > 0 ? formatDuration(activeRoute.duration) : '--'}
+                      </span>
+                    </div>
+                  </div>
 
-                {validEvents.length >= 3 && (
-                  <div className="pt-2 border-t space-y-3">
-                    {!showOptimized ? (
-                      <div className="space-y-2">
-                        <p className="text-sm text-slate-600">
-                          Suas atividades podem não estar na melhor ordem de deslocamento.
-                        </p>
-                        <Button
-                          onClick={handleOptimize}
-                          disabled={isOptimizing}
-                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
-                        >
-                          <Route className="mr-2 h-4 w-4" />
-                          {isOptimizing ? 'Otimizando...' : 'Otimizar Rota'}
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-200">
-                          Rota Otimizada!
-                        </Badge>
-                        {savings > 0.1 && (
-                          <p className="text-sm text-emerald-600 font-medium">
-                            Você economiza {savings.toFixed(1)} km de deslocamento!
+                  {validEvents.length >= 3 && (
+                    <div className="pt-2 border-t space-y-3">
+                      {!showOptimized ? (
+                        <div className="space-y-2">
+                          <p className="text-sm text-slate-600">
+                            Suas atividades podem não estar na melhor ordem de deslocamento.
                           </p>
-                        )}
-                        <div className="flex gap-2">
                           <Button
-                            onClick={handleApplyOptimization}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={handleOptimize}
+                            disabled={isOptimizing}
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
                           >
-                            Aplicar
-                          </Button>
-                          <Button
-                            onClick={() => setShowOptimized(false)}
-                            variant="outline"
-                            className="w-full"
-                          >
-                            Cancelar
+                            <Route className="mr-2 h-4 w-4" />
+                            {isOptimizing ? 'Otimizando...' : 'Otimizar Rota'}
                           </Button>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
+                      ) : (
+                        <div className="space-y-3">
+                          <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-200">
+                            Rota Otimizada!
+                          </Badge>
+                          {savings > 0.1 && (
+                            <p className="text-sm text-emerald-600 font-medium">
+                              Você economiza {savings.toFixed(1)} km de deslocamento!
+                            </p>
+                          )}
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleApplyOptimization}
+                              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                              Aplicar
+                            </Button>
+                            <Button
+                              onClick={() => setShowOptimized(false)}
+                              variant="outline"
+                              className="w-full"
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )
             ) : validEvents.length === 1 ? (
               <p className="text-sm text-slate-500">
                 Adicione mais atividades com localização para ver a rota e o cálculo de distância.

@@ -270,11 +270,16 @@ export default function TripItinerary() {
             onValueChange={(v: any) => setViewMode(v)}
             className="w-full sm:w-auto print-hidden"
           >
-            <TabsList className="grid w-full grid-cols-3 sm:flex sm:w-auto">
+            <TabsList className="grid w-full grid-cols-2 sm:flex sm:w-auto">
               <TabsTrigger value="daily" className="flex items-center gap-1.5 sm:gap-2">
-                <List className="w-4 h-4" /> <span className="text-xs sm:text-sm">Lista</span>
+                <List className="w-4 h-4" />{' '}
+                <span className="text-xs sm:text-sm hidden sm:inline">Lista</span>
+                <span className="text-xs sm:hidden">Lista de Atividades</span>
               </TabsTrigger>
-              <TabsTrigger value="weekly" className="flex items-center gap-1.5 sm:gap-2">
+              <TabsTrigger
+                value="weekly"
+                className="flex items-center gap-1.5 sm:gap-2 hidden sm:flex"
+              >
                 <LayoutGrid className="w-4 h-4" />{' '}
                 <span className="text-xs sm:text-sm">Semanal</span>
               </TabsTrigger>
