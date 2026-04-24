@@ -21,19 +21,15 @@ export const saveIntegracaoGoogleCalendar = async (
   userId: string,
   data: Partial<Omit<IntegracaoGoogleCalendar, 'id' | 'usuario_id' | 'created' | 'updated'>>,
 ) => {
-  try {
-    const existing = await getIntegracaoGoogleCalendar(userId)
-    if (existing) {
-      return await pb
-        .collection('integracao_google_calendar')
-        .update<IntegracaoGoogleCalendar>(existing.id, data)
-    } else {
-      return await pb.collection('integracao_google_calendar').create<IntegracaoGoogleCalendar>({
-        usuario_id: userId,
-        ...data,
-      })
-    }
-  } catch (error) {
-    throw error
+  const existing = await getIntegracaoGoogleCalendar(userId)
+  if (existing) {
+    return await pb
+      .collection('integracao_google_calendar')
+      .update<IntegracaoGoogleCalendar>(existing.id, data)
+  } else {
+    return await pb.collection('integracao_google_calendar').create<IntegracaoGoogleCalendar>({
+      usuario_id: userId,
+      ...data,
+    })
   }
 }
