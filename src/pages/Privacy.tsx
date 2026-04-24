@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ShieldAlert, AlertTriangle, Loader2 } from 'lucide-react'
+import { ShieldAlert, AlertTriangle, Loader2, Download } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 import pb from '@/lib/pocketbase/client'
@@ -26,6 +26,43 @@ export default function Privacy() {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [isExporting, setIsExporting] = useState(false)
+
+  const handleExportData = async () => {
+    setIsExporting(true)
+    try {
+      const data = await pb.send('/backend/v1/users/export-data', {
+        method: 'GET',
+      })
+
+      const jsonString = JSON.stringify(data, null, 2)
+      const blob = new Blob([jsonString], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+
+      const dateStr = new Date().toISOString().split('T')[0]
+      link.download = `tripflow_dados_${dateStr}.json`
+
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast({
+        title: 'Dados exportados com sucesso!',
+        description: 'O download do seu arquivo JSON foi iniciado.',
+      })
+    } catch (err: any) {
+      toast({
+        title: 'Erro ao exportar dados',
+        description: err.message || 'Ocorreu um erro ao tentar exportar seus dados.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   const handleDeleteAccount = async () => {
     if (!password) {
@@ -73,76 +110,98 @@ export default function Privacy() {
         </p>
       </div>
 
-      <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-destructive mb-2">Deletar Meus Dados</h2>
-        <p className="text-slate-700 mb-6">
-          Ao clicar abaixo, TODOS os seus dados serão deletados permanentemente. Esta ação não pode
-          ser desfeita.
-        </p>
+      <div className="space-y-6">
+        <div className="bg-card border rounded-lg p-6">
+          <h2 className="text-xl font-semibold mb-2">Baixar Meus Dados</h2>
+          <p className="text-muted-foreground mb-6">
+            Exporte todos os seus dados em formato JSON para usar em outro serviço.
+          </p>
+          <Button onClick={handleExportData} disabled={isExporting} className="font-semibold">
+            {isExporting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Exportando...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar Dados
+              </>
+            )}
+          </Button>
+        </div>
 
-        <Dialog
-          open={isOpen}
-          onOpenChange={(open) => {
-            setIsOpen(open)
-            if (!open) {
-              setPassword('')
-              setError('')
-            }
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button variant="destructive" className="font-semibold">
-              Deletar Todos os Meus Dados
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                Tem certeza que deseja deletar TODOS os seus dados?
-              </DialogTitle>
-              <DialogDescription className="text-destructive font-medium pt-2">
-                Esta ação é IRREVERSÍVEL. Todos os seus dados, viagens, documentos, despesas e
-                comentários serão deletados permanentemente.
-              </DialogDescription>
-            </DialogHeader>
+        <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-6">
+          <h2 className="text-xl font-semibold text-destructive mb-2">Deletar Meus Dados</h2>
+          <p className="text-slate-700 mb-6">
+            Ao clicar abaixo, TODOS os seus dados serão deletados permanentemente. Esta ação não
+            pode ser desfeita.
+          </p>
 
-            <div className="py-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Digite sua senha para confirmar</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Sua senha"
-                  disabled={isLoading}
-                />
-                {error && <p className="text-sm text-destructive mt-1">{error}</p>}
+          <Dialog
+            open={isOpen}
+            onOpenChange={(open) => {
+              setIsOpen(open)
+              if (!open) {
+                setPassword('')
+                setError('')
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="destructive" className="font-semibold">
+                Deletar Todos os Meus Dados
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Tem certeza que deseja deletar TODOS os seus dados?
+                </DialogTitle>
+                <DialogDescription className="text-destructive font-medium pt-2">
+                  Esta ação é IRREVERSÍVEL. Todos os seus dados, viagens, documentos, despesas e
+                  comentários serão deletados permanentemente.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password">Digite sua senha para confirmar</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Sua senha"
+                    disabled={isLoading}
+                  />
+                  {error && <p className="text-sm text-destructive mt-1">{error}</p>}
+                </div>
               </div>
-            </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="secondary" onClick={() => setIsOpen(false)} disabled={isLoading}>
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteAccount}
-                disabled={!password || isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deletando...
-                  </>
-                ) : (
-                  'Deletar Permanentemente'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="secondary" onClick={() => setIsOpen(false)} disabled={isLoading}>
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteAccount}
+                  disabled={!password || isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deletando...
+                    </>
+                  ) : (
+                    'Deletar Permanentemente'
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </div>
   )
