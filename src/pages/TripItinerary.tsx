@@ -2,8 +2,10 @@ import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getTrip, Trip } from '@/services/trips'
 import { getItinerarioByTrip, deleteItinerario, ItinerarioEvent } from '@/services/itinerario'
+import { getComentario } from '@/services/comentarios'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Calendar } from '@/components/ui/calendar'
@@ -40,6 +42,7 @@ export default function TripItinerary() {
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const { user } = useAuth()
   const [eventToEdit, setEventToEdit] = useState<ItinerarioEvent | null>(null)
   const [eventToDelete, setEventToDelete] = useState<ItinerarioEvent | null>(null)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
@@ -84,6 +87,29 @@ export default function TripItinerary() {
 
   useRealtime('itinerario', (e) => {
     if (e.record.viagem_id === id) loadData()
+  })
+
+  useRealtime('comentarios', async (e) => {
+    if (e.action === 'create' && e.record.viagem_id === id) {
+      if (user && e.record.usuario_id !== user.id) {
+        const activity = events.find((ev) => ev.id === e.record.atividade_id)
+        if (activity) {
+          try {
+            const comment = await getComentario(e.record.id)
+            const userName = comment.expand?.usuario_id?.name || 'Alguém'
+            toast({
+              title: `${userName} comentou em ${activity.atividade}`,
+              duration: 5000,
+            })
+          } catch (err) {
+            toast({
+              title: `Novo comentário em ${activity.atividade}`,
+              duration: 5000,
+            })
+          }
+        }
+      }
+    }
   })
 
   const handleDelete = async () => {

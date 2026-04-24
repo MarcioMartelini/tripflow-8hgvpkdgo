@@ -14,7 +14,12 @@ export interface Comentario {
 export const getComentarios = (atividadeId: string) =>
   pb.collection('comentarios').getFullList<Comentario>({
     filter: `atividade_id = "${atividadeId}"`,
-    sort: 'created',
+    sort: '-created',
+    expand: 'usuario_id',
+  })
+
+export const getComentario = (id: string) =>
+  pb.collection('comentarios').getOne<Comentario>(id, {
     expand: 'usuario_id',
   })
 

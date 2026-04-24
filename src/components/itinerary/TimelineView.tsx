@@ -16,6 +16,8 @@ import {
   FileText,
 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
+import { cn } from '@/lib/utils'
+import { ActivityComments } from './ActivityComments'
 
 interface TimelineViewProps {
   events: ItinerarioEvent[]
@@ -41,6 +43,16 @@ const getIcon = (tipo: string) => {
 
 export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewProps) {
   const [previewFile, setPreviewFile] = useState<{ url: string; title: string } | null>(null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   if (events.length === 0) {
     return (
@@ -60,78 +72,105 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
 
   return (
     <div className="relative pl-6 border-l-2 border-slate-200 space-y-6 py-4 animate-fade-in">
-      {events.map((event) => (
-        <div key={event.id} className="relative group">
-          <div className="absolute -left-[35px] top-1 bg-white border-2 border-primary text-primary rounded-full p-1.5 shadow-sm">
-            {getIcon(event.tipo)}
-          </div>
-          <Card className="ml-2 hover:shadow-md transition-shadow">
-            <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 justify-between items-start">
-              <div className="space-y-2 flex-1 w-full">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-semibold">
-                    {event.hora_inicio} {event.hora_fim && `- ${event.hora_fim}`}
-                  </span>
-                  <span className="text-xs text-slate-500 capitalize px-2 py-0.5 bg-slate-50 border rounded">
-                    {event.tipo}
-                  </span>
-                </div>
-                <h4 className="text-lg font-bold text-slate-900">{event.atividade}</h4>
-                {event.local && (
-                  <p className="text-sm text-slate-500 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5" /> {event.local}
-                  </p>
-                )}
-                {event.notas && (
-                  <p className="text-sm text-slate-600 bg-slate-50 p-2 rounded mt-2 whitespace-pre-wrap">
-                    {event.notas}
-                  </p>
-                )}
-                {event.arquivos && event.arquivos.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {(Array.isArray(event.arquivos) ? event.arquivos : [event.arquivos]).map(
-                      (arquivo, idx, arr) => (
-                        <button
-                          key={idx}
-                          onClick={() => {
-                            const url = pb.files.getURL(event as any, arquivo)
-                            setPreviewFile({
-                              url,
-                              title: `Itinerário - ${event.atividade} - PDF ${arr.length > 1 ? idx + 1 : ''}`,
-                            })
-                          }}
-                          className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs transition-colors border border-slate-200"
-                          title={arquivo}
-                        >
-                          <FileText className="h-3.5 w-3.5 text-red-500" />
-                          <span className="truncate max-w-[150px]">
-                            PDF {arr.length > 1 ? idx + 1 : ''}
-                          </span>
-                        </button>
-                      ),
+      {events.map((event) => {
+        const isExpanded = expandedIds.has(event.id)
+
+        return (
+          <div key={event.id} className="relative group">
+            <div className="absolute -left-[35px] top-1 bg-white border-2 border-primary text-primary rounded-full p-1.5 shadow-sm">
+              {getIcon(event.tipo)}
+            </div>
+            <Card
+              className={cn(
+                'ml-2 transition-all hover:shadow-md',
+                isExpanded ? 'ring-1 ring-slate-200' : '',
+              )}
+            >
+              <CardContent className="p-0">
+                <div
+                  className="p-4 sm:p-5 flex flex-col sm:flex-row gap-4 justify-between items-start cursor-pointer"
+                  onClick={() => toggleExpand(event.id)}
+                >
+                  <div className="space-y-2 flex-1 w-full">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-semibold">
+                        {event.hora_inicio} {event.hora_fim && `- ${event.hora_fim}`}
+                      </span>
+                      <span className="text-xs text-slate-500 capitalize px-2 py-0.5 bg-slate-50 border rounded">
+                        {event.tipo}
+                      </span>
+                    </div>
+                    <h4 className="text-lg font-bold text-slate-900">{event.atividade}</h4>
+                    {event.local && (
+                      <p className="text-sm text-slate-500 flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5" /> {event.local}
+                      </p>
+                    )}
+                    {event.notas && (
+                      <p className="text-sm text-slate-600 bg-slate-50 p-2 rounded mt-2 whitespace-pre-wrap">
+                        {event.notas}
+                      </p>
+                    )}
+                    {event.arquivos && event.arquivos.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(Array.isArray(event.arquivos) ? event.arquivos : [event.arquivos]).map(
+                          (arquivo, idx, arr) => (
+                            <button
+                              key={idx}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const url = pb.files.getURL(event as any, arquivo)
+                                setPreviewFile({
+                                  url,
+                                  title: `Itinerário - ${event.atividade} - PDF ${arr.length > 1 ? idx + 1 : ''}`,
+                                })
+                              }}
+                              className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs transition-colors border border-slate-200"
+                              title={arquivo}
+                            >
+                              <FileText className="h-3.5 w-3.5 text-red-500" />
+                              <span className="truncate max-w-[150px]">
+                                PDF {arr.length > 1 ? idx + 1 : ''}
+                              </span>
+                            </button>
+                          ),
+                        )}
+                      </div>
                     )}
                   </div>
+                  <div
+                    className="flex gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity w-full sm:w-auto justify-end border-t sm:border-t-0 pt-3 sm:pt-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button variant="outline" size="sm" onClick={() => onEdit(event)}>
+                      <Edit2 className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Editar</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => onDelete(event)}
+                    >
+                      <Trash2 className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Deletar</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div
+                    className="px-4 pb-4 sm:px-5 sm:pb-5 pt-0 cursor-default"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ActivityComments atividadeId={event.id} tripId={event.viagem_id} />
+                  </div>
                 )}
-              </div>
-              <div className="flex gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity w-full sm:w-auto justify-end border-t sm:border-t-0 pt-3 sm:pt-0">
-                <Button variant="outline" size="sm" onClick={() => onEdit(event)}>
-                  <Edit2 className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Editar</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                  onClick={() => onDelete(event)}
-                >
-                  <Trash2 className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Deletar</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ))}
+              </CardContent>
+            </Card>
+          </div>
+        )
+      })}
 
       <PdfViewerDialog
         url={previewFile?.url || null}
