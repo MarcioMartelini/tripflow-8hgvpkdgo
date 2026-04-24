@@ -24,7 +24,7 @@ interface Props {
   ticket: Ticket
   onEdit: (t: Ticket) => void
   onDelete: () => void
-  onPreview: (url: string, title: string) => void
+  onPreview: (url: string, title: string, updated?: string) => void
 }
 
 export function TicketCard({ ticket, onEdit, onDelete, onPreview }: Props) {
@@ -133,6 +133,7 @@ export function TicketCard({ ticket, onEdit, onDelete, onPreview }: Props) {
                         onPreview(
                           url,
                           `Ticket - ${ticket.origem || 'Origem'} para ${ticket.destino || 'Destino'}`,
+                          ticket.updated,
                         )
                       }}
                       aria-label={`Visualizar PDF de ${ticket.origem || 'Origem'} para ${ticket.destino || 'Destino'}`}

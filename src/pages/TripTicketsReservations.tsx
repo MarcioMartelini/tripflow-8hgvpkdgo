@@ -51,7 +51,11 @@ export default function TripTicketsReservations() {
   const [reservaDialogOpen, setReservaDialogOpen] = useState(false)
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null)
 
-  const [previewFile, setPreviewFile] = useState<{ url: string; title: string } | null>(null)
+  const [previewFile, setPreviewFile] = useState<{
+    url: string
+    title: string
+    updated?: string
+  } | null>(null)
   const [downloadingAll, setDownloadingAll] = useState(false)
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
@@ -354,7 +358,7 @@ export default function TripTicketsReservations() {
                     ticket={t}
                     onEdit={handleEditTicket}
                     onDelete={loadData}
-                    onPreview={(url, title) => setPreviewFile({ url, title })}
+                    onPreview={(url, title, updated) => setPreviewFile({ url, title, updated })}
                   />
                 ))}
               </div>
@@ -372,7 +376,7 @@ export default function TripTicketsReservations() {
                     reserva={r}
                     onEdit={handleEditReserva}
                     onDelete={loadData}
-                    onPreview={(url, title) => setPreviewFile({ url, title })}
+                    onPreview={(url, title, updated) => setPreviewFile({ url, title, updated })}
                   />
                 ))}
               </div>
@@ -496,6 +500,7 @@ export default function TripTicketsReservations() {
       <PdfViewerDialog
         url={previewFile?.url || null}
         title={previewFile?.title || ''}
+        updated={previewFile?.updated}
         onClose={() => setPreviewFile(null)}
       />
     </div>

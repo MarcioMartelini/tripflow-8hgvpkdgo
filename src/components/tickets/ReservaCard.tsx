@@ -24,7 +24,7 @@ interface Props {
   reserva: Reserva
   onEdit: (r: Reserva) => void
   onDelete: () => void
-  onPreview: (url: string, title: string) => void
+  onPreview: (url: string, title: string, updated?: string) => void
 }
 
 export function ReservaCard({ reserva, onEdit, onDelete, onPreview }: Props) {
@@ -130,7 +130,7 @@ export function ReservaCard({ reserva, onEdit, onDelete, onPreview }: Props) {
                       className="h-8 text-xs"
                       onClick={() => {
                         const url = pb.files.getURL(reserva, f, { token: pb.authStore.token })
-                        onPreview(url, `Reserva - ${reserva.nome}`)
+                        onPreview(url, `Reserva - ${reserva.nome}`, reserva.updated)
                       }}
                       aria-label={`Visualizar PDF de ${reserva.nome}`}
                     >
