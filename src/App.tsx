@@ -18,6 +18,7 @@ import Documents from './pages/Documents'
 import Alerts from './pages/Alerts'
 import TripReport from './pages/TripReport'
 import SyncHistory from './pages/SyncHistory'
+import Privacy from './pages/Privacy'
 import { AuthProvider } from './hooks/use-auth'
 import { EncryptionProvider } from './hooks/use-encryption'
 
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/trips/:id/report" element={<TripReport />} />
               <Route path="/alerts" element={<Alerts />} />
               <Route path="/settings/sync-history" element={<SyncHistory />} />
+              <Route path="/settings/privacy" element={<Privacy />} />
             </Route>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
