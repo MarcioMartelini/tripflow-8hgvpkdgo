@@ -23,3 +23,18 @@ export const getReservas = async (tripId: string): Promise<Reserva[]> => {
     filter: `viagem_id = "${tripId}"`,
   })
 }
+
+export const createReserva = async (data: Partial<Reserva> | FormData): Promise<Reserva> => {
+  return await pb.collection('reservas').create<Reserva>(data)
+}
+
+export const updateReserva = async (
+  id: string,
+  data: Partial<Reserva> | FormData,
+): Promise<Reserva> => {
+  return await pb.collection('reservas').update<Reserva>(id, data)
+}
+
+export const deleteReserva = async (id: string): Promise<void> => {
+  await pb.collection('reservas').delete(id)
+}

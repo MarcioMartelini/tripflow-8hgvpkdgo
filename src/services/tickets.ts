@@ -23,3 +23,18 @@ export const getTickets = async (tripId: string): Promise<Ticket[]> => {
     filter: `viagem_id = "${tripId}"`,
   })
 }
+
+export const createTicket = async (data: Partial<Ticket> | FormData): Promise<Ticket> => {
+  return await pb.collection('tickets').create<Ticket>(data)
+}
+
+export const updateTicket = async (
+  id: string,
+  data: Partial<Ticket> | FormData,
+): Promise<Ticket> => {
+  return await pb.collection('tickets').update<Ticket>(id, data)
+}
+
+export const deleteTicket = async (id: string): Promise<void> => {
+  await pb.collection('tickets').delete(id)
+}
