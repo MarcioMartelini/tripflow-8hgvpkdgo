@@ -10,6 +10,8 @@ import {
 import { getTrip, Trip } from '@/services/trips'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
+import { useEncryption } from '@/hooks/use-encryption'
+import { encryptFile, decryptFile, encryptData, decryptData } from '@/lib/crypto'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -118,6 +120,7 @@ const getExpirationStatus = (dateStr?: string) => {
 export default function TripDocuments() {
   const { tripId } = useParams<{ tripId: string }>()
   const { toast } = useToast()
+  const { encryptionKey } = useEncryption()
 
   const [trip, setTrip] = useState<Trip | null>(null)
   const [docs, setDocs] = useState<Documento[]>([])
@@ -135,8 +138,16 @@ export default function TripDocuments() {
   const [dataExp, setDataExp] = useState('')
   const [dateError, setDateError] = useState('')
   const [notas, setNotas] = useState('')
+
   const [uploading, setUploading] = useState(false)
+  const [uploadPhase, setUploadPhase] = useState<'idle' | 'encrypting' | 'uploading' | 'done'>(
+    'idle',
+  )
   const [uploadProgress, setUploadProgress] = useState(0)
+
+  const [decryptedNames, setDecryptedNames] = useState<Record<string, string>>({})
+  const [decryptedUrl, setDecryptedUrl] = useState<string | null>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleOpenUploadChange = (open: boolean) => {
@@ -148,6 +159,8 @@ export default function TripDocuments() {
       setDataExp('')
       setDateError('')
       setNotas('')
+      setUploadPhase('idle')
+      setUploadProgress(0)
     }
   }
 
@@ -173,6 +186,60 @@ export default function TripDocuments() {
   useRealtime('documentos', () => {
     if (tripId) loadData()
   })
+
+  // Decrypt filenames for the list
+  useEffect(() => {
+    const decryptNames = async () => {
+      if (!encryptionKey) return
+      const names: Record<string, string> = {}
+      for (const doc of docs) {
+        if (doc.nome_arquivo_original && doc.iv) {
+          try {
+            const parts = doc.nome_arquivo_original.split(':')
+            if (parts.length === 2) {
+              const [iv, cipherText] = parts
+              names[doc.id] = await decryptData(encryptionKey, cipherText, iv)
+            } else {
+              names[doc.id] = doc.nome_arquivo
+            }
+          } catch (e) {
+            names[doc.id] = 'Erro ao descriptografar'
+          }
+        } else {
+          names[doc.id] = doc.nome_arquivo
+        }
+      }
+      setDecryptedNames(names)
+    }
+    decryptNames()
+  }, [docs, encryptionKey])
+
+  // Decrypt file blob for viewing
+  useEffect(() => {
+    if (viewDoc && encryptionKey) {
+      setDecryptedUrl(null)
+      const fetchAndDecrypt = async () => {
+        try {
+          const url = getDocumentUrl(viewDoc)
+          const res = await fetch(url)
+          const buffer = await res.arrayBuffer()
+          if (viewDoc.iv) {
+            const blob = await decryptFile(encryptionKey, buffer)
+            setDecryptedUrl(URL.createObjectURL(blob))
+          } else {
+            // Legacy unencrypted documents
+            setDecryptedUrl(URL.createObjectURL(new Blob([buffer], { type: 'application/pdf' })))
+          }
+        } catch (e) {
+          toast({ title: 'Erro ao descriptografar documento', variant: 'destructive' })
+        }
+      }
+      fetchAndDecrypt()
+    }
+    return () => {
+      if (decryptedUrl) URL.revokeObjectURL(decryptedUrl)
+    }
+  }, [viewDoc, encryptionKey])
 
   const handleFileChange = (f: File | undefined) => {
     if (!f) {
@@ -213,33 +280,70 @@ export default function TripDocuments() {
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file || !tipo || fileError || dateError) return
+    if (!file || !tipo || fileError || dateError || !encryptionKey) return
 
     setUploading(true)
-    setUploadProgress(30)
-    const fd = new FormData()
-    fd.append('tipo', tipo)
-    fd.append('nome_arquivo', file.name)
-    fd.append('arquivo', file)
-    if (dataExp) fd.append('data_expiracao', `${dataExp} 12:00:00.000Z`)
-    if (notas) fd.append('notas', notas)
+    setUploadPhase('encrypting')
+    setUploadProgress(10)
 
     try {
-      await createDocument(tripId!, fd)
+      const { encryptedBlob, iv } = await encryptFile(encryptionKey, file)
       setUploadProgress(100)
-      toast({ title: 'Documento adicionado com sucesso!' })
-      handleOpenUploadChange(false)
-      loadData()
-    } catch {
-      toast({ title: 'Erro ao fazer upload do documento.', variant: 'destructive' })
-    } finally {
+
+      const filenameEnc = await encryptData(encryptionKey, file.name)
+      const encryptedNameStr = `${filenameEnc.iv}:${filenameEnc.cipherText}`
+
+      const fd = new FormData()
+      fd.append('tipo', tipo)
+      fd.append('nome_arquivo', 'documento_seguro.bin')
+      fd.append('nome_arquivo_original', encryptedNameStr)
+      fd.append('iv', iv)
+
+      const randomName =
+        window.crypto && crypto.randomUUID
+          ? crypto.randomUUID().replace(/-/g, '')
+          : Math.random().toString(36).substring(2, 15)
+
+      fd.append(
+        'arquivo',
+        new File([encryptedBlob], randomName, { type: 'application/octet-stream' }),
+      )
+
+      if (dataExp) fd.append('data_expiracao', `${dataExp} 12:00:00.000Z`)
+      if (notas) fd.append('notas', notas)
+
+      setUploadPhase('uploading')
+      setUploadProgress(0)
+
+      const progressInterval = setInterval(() => {
+        setUploadProgress((p) => Math.min(p + 15, 90))
+      }, 300)
+
+      await createDocument(tripId!, fd)
+
+      clearInterval(progressInterval)
+      setUploadProgress(100)
+      setUploadPhase('done')
+
+      setTimeout(() => {
+        toast({ title: 'Documento adicionado com sucesso!' })
+        handleOpenUploadChange(false)
+        loadData()
+        setUploading(false)
+        setUploadPhase('idle')
+        setUploadProgress(0)
+      }, 500)
+    } catch (err) {
+      toast({ title: 'Erro ao processar documento.', variant: 'destructive' })
       setUploading(false)
+      setUploadPhase('idle')
       setUploadProgress(0)
     }
   }
 
   const filteredDocs = docs.filter((d) => filter === 'todos' || d.tipo === filter)
-  const isSubmitDisabled = !file || !tipo || !!fileError || !!dateError || uploading
+  const isSubmitDisabled =
+    !file || !tipo || !!fileError || !!dateError || uploading || !encryptionKey
 
   if (error) {
     return (
@@ -276,8 +380,12 @@ export default function TripDocuments() {
 
       <div className="flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Meus Documentos</h1>
-          <p className="text-slate-500 mt-1">Documentos privados da viagem {trip?.title}</p>
+          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
+            Meus Documentos <Shield className="h-6 w-6 text-green-600" />
+          </h1>
+          <p className="text-slate-500 mt-1">
+            Documentos da viagem {trip?.title} são criptografados de ponta-a-ponta.
+          </p>
         </div>
 
         <Dialog open={openUpload} onOpenChange={handleOpenUploadChange}>
@@ -288,12 +396,23 @@ export default function TripDocuments() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Novo Documento</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-green-600" />
+                Novo Documento Seguro
+              </DialogTitle>
             </DialogHeader>
+
+            {!encryptionKey && (
+              <div className="p-3 bg-red-50 text-red-600 rounded-md text-sm flex items-center mb-4">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                <span>Chave de criptografia não encontrada. Faça login novamente.</span>
+              </div>
+            )}
+
             <form onSubmit={handleUpload} className="space-y-4">
               <div className="space-y-2">
                 <Label>Tipo *</Label>
-                <Select value={tipo} onValueChange={setTipo} required>
+                <Select value={tipo} onValueChange={setTipo} required disabled={uploading}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
                   </SelectTrigger>
@@ -306,16 +425,18 @@ export default function TripDocuments() {
                   </SelectContent>
                 </Select>
                 {!tipo && file && <p className="text-sm text-red-500">Tipo é obrigatório</p>}
-              </div>{' '}
+              </div>
               <div className="space-y-2">
                 <Label>Arquivo PDF *</Label>
                 <div
-                  className={`border-2 border-dashed rounded-lg p-6 text-center hover:bg-slate-50 cursor-pointer transition-colors ${fileError ? 'border-red-300' : 'border-slate-200'}`}
-                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    uploading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-50 cursor-pointer'
+                  } ${fileError ? 'border-red-300' : 'border-slate-200'}`}
+                  onClick={() => !uploading && fileInputRef.current?.click()}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault()
-                    handleFileChange(e.dataTransfer.files?.[0])
+                    if (!uploading) handleFileChange(e.dataTransfer.files?.[0])
                   }}
                 >
                   <input
@@ -323,6 +444,7 @@ export default function TripDocuments() {
                     accept="application/pdf"
                     className="hidden"
                     ref={fileInputRef}
+                    disabled={uploading}
                     onChange={(e) => handleFileChange(e.target.files?.[0])}
                   />
                   <UploadCloud
@@ -345,6 +467,7 @@ export default function TripDocuments() {
                 <Input
                   type="date"
                   value={dataExp}
+                  disabled={uploading}
                   onChange={(e) => handleDateChange(e.target.value)}
                 />
                 {dateError && <p className="text-sm text-red-500">{dateError}</p>}
@@ -354,11 +477,25 @@ export default function TripDocuments() {
                 <Textarea
                   value={notas}
                   maxLength={500}
+                  disabled={uploading}
                   onChange={(e) => setNotas(e.target.value)}
                   placeholder="Adicione observações sobre este documento"
                 />
               </div>
-              {uploading && <Progress value={uploadProgress} className="h-2" />}
+
+              {uploading && (
+                <div className="space-y-1 mt-2">
+                  <div className="flex justify-between text-xs text-slate-500 font-medium">
+                    <span>
+                      {uploadPhase === 'encrypting' && `Criptografando... ${uploadProgress}%`}
+                      {uploadPhase === 'uploading' && `Enviando... ${uploadProgress}%`}
+                      {uploadPhase === 'done' && 'Concluído!'}
+                    </span>
+                  </div>
+                  <Progress value={uploadProgress} className="h-2 transition-all duration-300" />
+                </div>
+              )}
+
               <div className="flex justify-end gap-2 pt-2">
                 <Button
                   type="button"
@@ -369,7 +506,7 @@ export default function TripDocuments() {
                   Cancelar
                 </Button>
                 <Button type="submit" disabled={isSubmitDisabled}>
-                  {uploading ? 'Enviando...' : 'Adicionar'}
+                  {uploading ? 'Processando...' : 'Adicionar'}
                 </Button>
               </div>
             </form>
@@ -395,9 +532,11 @@ export default function TripDocuments() {
 
       {filteredDocs.length === 0 ? (
         <div className="text-center py-16 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-          <FileText className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-          <h3 className="text-xl font-semibold text-slate-900">Nenhum documento adicionado</h3>
-          <p className="text-slate-500 mt-2 mb-6">Comece adicionando seus documentos de viagem</p>
+          <Shield className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+          <h3 className="text-xl font-semibold text-slate-900">Cofre de Documentos Vazio</h3>
+          <p className="text-slate-500 mt-2 mb-6">
+            Comece adicionando seus documentos com proteção E2EE
+          </p>
           <Button onClick={() => setOpenUpload(true)}>
             <Plus className="mr-2 h-4 w-4" /> Adicionar Documento
           </Button>
@@ -411,19 +550,24 @@ export default function TripDocuments() {
                 ? format(parseISO(doc.data_expiracao), 'dd/MM/yyyy')
                 : null
 
+            const displayName = decryptedNames[doc.id] || doc.nome_arquivo
+
             return (
               <Card key={doc.id} className="animate-fade-in hover:shadow-md transition-shadow">
                 <CardContent className="p-5 flex flex-col h-full">
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="p-3 bg-slate-100 rounded-lg shrink-0">
+                    <div className="p-3 bg-slate-100 rounded-lg shrink-0 relative">
                       {getTypeIcon(doc.tipo)}
+                      {doc.iv && (
+                        <Shield className="h-3 w-3 text-green-600 absolute -bottom-1 -right-1" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">
                         {doc.tipo}
                       </p>
-                      <h3 className="font-medium text-slate-900 truncate" title={doc.nome_arquivo}>
-                        {doc.nome_arquivo}
+                      <h3 className="font-medium text-slate-900 truncate" title={displayName}>
+                        {displayName}
                       </h3>
                       {formattedDate && (
                         <p className="text-xs text-slate-500 mt-1">Expira em: {formattedDate}</p>
@@ -459,21 +603,44 @@ export default function TripDocuments() {
       <Dialog open={!!viewDoc} onOpenChange={(o) => !o && setViewDoc(null)}>
         <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="truncate pr-8">Visualizar Documento</DialogTitle>
+            <DialogTitle className="truncate pr-8 flex items-center gap-2">
+              {viewDoc?.iv && <Shield className="h-5 w-5 text-green-600 shrink-0" />}
+              Visualizar Documento
+            </DialogTitle>
           </DialogHeader>
-          <div className="text-sm text-slate-500 mb-2 truncate">{viewDoc?.nome_arquivo}</div>
-          <div className="flex-1 bg-slate-100 rounded-md overflow-hidden relative flex flex-col">
-            {viewDoc && <PdfViewer url={getDocumentUrl(viewDoc)} title={viewDoc.nome_arquivo} />}
+          <div className="text-sm text-slate-500 mb-2 truncate">
+            {viewDoc ? decryptedNames[viewDoc.id] || viewDoc.nome_arquivo : ''}
+          </div>
+          <div className="flex-1 bg-slate-100 rounded-md overflow-hidden relative flex flex-col items-center justify-center">
+            {viewDoc && decryptedUrl ? (
+              <PdfViewer
+                url={decryptedUrl}
+                title={decryptedNames[viewDoc.id] || viewDoc.nome_arquivo}
+              />
+            ) : (
+              <div className="flex flex-col items-center text-slate-500 space-y-4">
+                <Shield className="h-12 w-12 animate-pulse text-primary/50" />
+                <p>Descriptografando documento de forma segura...</p>
+              </div>
+            )}
           </div>
           <DialogFooter className="mt-4 gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setViewDoc(null)}>
               Fechar
             </Button>
-            {viewDoc && getDocumentUrl(viewDoc) && (
+            {viewDoc && decryptedUrl && (
               <Button asChild>
-                <a href={getDocumentUrl(viewDoc)} download target="_blank" rel="noreferrer">
+                <a
+                  href={decryptedUrl}
+                  download={decryptedNames[viewDoc.id] || viewDoc.nome_arquivo}
+                >
                   <Download className="mr-2 h-4 w-4" /> Download
                 </a>
+              </Button>
+            )}
+            {viewDoc && !decryptedUrl && (
+              <Button disabled>
+                <Download className="mr-2 h-4 w-4 animate-pulse" /> Preparando...
               </Button>
             )}
           </DialogFooter>

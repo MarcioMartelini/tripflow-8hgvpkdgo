@@ -6,6 +6,8 @@ export interface Documento {
   usuario_id: string
   tipo: string
   nome_arquivo: string
+  nome_arquivo_original?: string
+  iv?: string
   url_arquivo?: string
   data_expiracao?: string
   arquivo: string

@@ -85,3 +85,35 @@ export const decryptData = async (
   const dec = new TextDecoder()
   return dec.decode(decBuffer)
 }
+
+export const encryptFile = async (
+  key: CryptoKey,
+  file: File | Blob | ArrayBuffer,
+): Promise<{ encryptedBlob: Blob; iv: string }> => {
+  const buffer = file instanceof ArrayBuffer ? file : await (file as Blob).arrayBuffer()
+  const iv = window.crypto.getRandomValues(new Uint8Array(12))
+  const cipherBuffer = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, buffer)
+
+  const combined = new Uint8Array(iv.length + cipherBuffer.byteLength)
+  combined.set(iv, 0)
+  combined.set(new Uint8Array(cipherBuffer), iv.length)
+
+  return {
+    encryptedBlob: new Blob([combined], { type: 'application/octet-stream' }),
+    iv: arrayBufferToBase64(iv),
+  }
+}
+
+export const decryptFile = async (key: CryptoKey, buffer: ArrayBuffer): Promise<Blob> => {
+  const data = new Uint8Array(buffer)
+  const iv = data.slice(0, 12)
+  const ciphertext = data.slice(12)
+
+  const decryptedBuffer = await window.crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext,
+  )
+
+  return new Blob([decryptedBuffer], { type: 'application/pdf' })
+}
