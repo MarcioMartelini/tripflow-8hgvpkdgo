@@ -112,7 +112,10 @@ export function MapView({
       }
       toast({ title: 'Meio de transporte de todas as atividades atualizado!' })
     } catch (e) {
-      toast({ title: 'Erro ao atualizar meio de transporte', variant: 'destructive' })
+      toast({
+        title: 'Erro de rede. Não foi possível atualizar o transporte.',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -150,50 +153,19 @@ export function MapView({
     const fetchRoute = async () => {
       setIsCalculatingRoute(true)
       try {
-        let totalDistance = 0
-        let totalDuration = 0
-        const legs: any[] = []
-        const geometries: any[] = []
+        const { calculateRoute } = await import('@/lib/osrm')
+        const route = await calculateRoute(validEvents, { overview: 'full', geometries: 'geojson' })
 
-        await Promise.all(
-          validEvents.slice(0, -1).map(async (ev, i) => {
-            const next = validEvents[i + 1]
-            const mode = ev.meio_transporte || 'carro'
-            let profile = 'driving'
-            let multiplier = 1
-            if (mode === 'andando') profile = 'walking'
-            if (mode === 'bicicleta') profile = 'cycling'
-            if (mode === 'transporte_publico') {
-              profile = 'driving'
-              multiplier = 1.5 // estimate 50% slower due to stops/waiting
-            }
-
-            const res = await fetch(
-              `https://router.project-osrm.org/route/v1/${profile}/${ev.longitude},${ev.latitude};${next.longitude},${next.latitude}?overview=full&geometries=geojson`,
-            )
-            const data = await res.json()
-            if (data.code === 'Ok' && data.routes.length > 0) {
-              const route = data.routes[0]
-              totalDistance += route.distance / 1000
-              totalDuration += (route.duration / 60) * multiplier
-              legs[i] = {
-                distance: route.distance / 1000,
-                duration: (route.duration / 60) * multiplier,
-              }
-              geometries[i] = route.geometry
-            } else {
-              legs[i] = null
-              geometries[i] = null
-            }
-          }),
-        )
-
-        setRouteInfo({
-          distance: totalDistance,
-          duration: totalDuration,
-          geometries: geometries.filter(Boolean),
-          legs: legs.filter(Boolean),
-        })
+        if (route) {
+          setRouteInfo({
+            distance: route.distance,
+            duration: route.duration,
+            geometries: route.geometries || [],
+            legs: route.legs,
+          })
+        } else {
+          setRouteInfo(null)
+        }
       } catch (err) {
         console.error('Error fetching route', err)
       } finally {
@@ -234,26 +206,21 @@ export function MapView({
     if (validEvents.length < 3) return
     setIsOptimizing(true)
     try {
-      const coordinates = validEvents.map((e) => `${e.longitude},${e.latitude}`).join(';')
-      const res = await fetch(
-        `https://router.project-osrm.org/trip/v1/${osrmProfile}/${coordinates}?source=first&roundtrip=false&overview=full&geometries=geojson`,
-      )
-      const data = await res.json()
-      if (data.code === 'Ok' && data.trips.length > 0) {
+      const { optimizeRoute } = await import('@/lib/osrm')
+      const optRoute = await optimizeRoute(validEvents)
+      if (optRoute) {
         setOptimizedRouteInfo({
-          distance: data.trips[0].distance / 1000,
-          duration: data.trips[0].duration / 60,
-          geometry: data.trips[0].geometry,
-          waypoints: data.waypoints,
-          legs: data.trips[0].legs.map((leg: any) => ({
-            distance: leg.distance / 1000,
-            duration: leg.duration / 60,
-          })),
+          distance: optRoute.distance,
+          duration: optRoute.duration,
+          geometry: optRoute.geometry,
+          waypoints: optRoute.waypoints,
+          legs: optRoute.legs,
         })
         setShowOptimized(true)
       }
     } catch (err) {
       console.error('Error optimizing route', err)
+      toast({ title: 'Erro ao otimizar rota', variant: 'destructive' })
     } finally {
       setIsOptimizing(false)
     }
@@ -585,8 +552,12 @@ export function MapView({
                                 } else {
                                   await updateItinerario(ev.id, { meio_transporte: val })
                                 }
-                              } catch {
-                                /* intentionally ignored */
+                                toast({ title: 'Transporte atualizado com sucesso!' })
+                              } catch (e) {
+                                toast({
+                                  title: 'Erro de rede. Não foi possível atualizar o transporte.',
+                                  variant: 'destructive',
+                                })
                               }
                             }}
                           >

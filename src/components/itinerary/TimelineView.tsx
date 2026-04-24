@@ -104,38 +104,19 @@ export function TimelineView({
       }
 
       setIsCalculatingRoute(true)
-      const newLegs: Record<string, { distance: number; duration: number }> = {}
-
-      await Promise.all(
-        valid.slice(0, -1).map(async (ev, i) => {
-          const next = valid[i + 1]
-          const mode = ev.meio_transporte || 'carro'
-          let profile = 'driving'
-          let multiplier = 1
-          if (mode === 'andando') profile = 'walking'
-          if (mode === 'bicicleta') profile = 'cycling'
-          if (mode === 'transporte_publico') {
-            profile = 'driving'
-            multiplier = 1.5
+      const { calculateRoute } = await import('@/lib/osrm')
+      const route = await calculateRoute(valid, { overview: 'false' })
+      if (route) {
+        const newLegs: Record<string, { distance: number; duration: number }> = {}
+        valid.slice(0, -1).forEach((ev, i) => {
+          if (route.legs[i]) {
+            newLegs[`${ev.id}-${valid[i + 1].id}`] = route.legs[i]
           }
-
-          try {
-            const res = await fetch(
-              `https://router.project-osrm.org/route/v1/${profile}/${ev.longitude},${ev.latitude};${next.longitude},${next.latitude}?overview=false`,
-            )
-            const data = await res.json()
-            if (data.code === 'Ok' && data.routes?.[0]) {
-              newLegs[`${ev.id}-${next.id}`] = {
-                distance: data.routes[0].distance / 1000,
-                duration: (data.routes[0].duration / 60) * multiplier,
-              }
-            }
-          } catch (e) {
-            console.error('Error fetching distance for leg', e)
-          }
-        }),
-      )
-      setLegs(newLegs)
+        })
+        setLegs(newLegs)
+      } else {
+        setLegs({})
+      }
       setIsCalculatingRoute(false)
     }
     fetchRoute()
@@ -149,30 +130,19 @@ export function TimelineView({
     }
     setIsOptimizing(true)
 
-    const mode = valid[0]?.meio_transporte || 'carro'
-    let profile = 'driving'
-    if (mode === 'andando') profile = 'walking'
-    if (mode === 'bicicleta') profile = 'cycling'
-
     try {
-      const coords = valid.map((e) => `${e.longitude},${e.latitude}`).join(';')
-      const res = await fetch(
-        `https://router.project-osrm.org/trip/v1/${profile}/${coords}?source=first&roundtrip=false`,
-      )
-      const data = await res.json()
-      if (data.code === 'Ok' && data.trips?.[0]) {
-        const optimizedDistance = data.trips[0].distance / 1000
+      const { calculateRoute, optimizeRoute } = await import('@/lib/osrm')
+      const optRoute = await optimizeRoute(valid)
 
-        const resOrig = await fetch(
-          `https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=false`,
-        )
-        const dataOrig = await resOrig.json()
-        const origDistance = dataOrig.routes?.[0]?.distance / 1000 || 0
+      if (optRoute && optRoute.waypoints) {
+        const origRoute = await calculateRoute(valid, { overview: 'false' })
+        const origDistance = origRoute?.distance || 0
+        const optimizedDistance = optRoute.distance
 
         const savings = origDistance - optimizedDistance
 
         if (savings > 0.1) {
-          const waypoints = data.waypoints.sort(
+          const waypoints = [...optRoute.waypoints].sort(
             (a: any, b: any) => a.waypoint_index - b.waypoint_index,
           )
           const newOrder = waypoints.map((wp: any) => valid[wp.original_index])
@@ -180,6 +150,8 @@ export function TimelineView({
         } else {
           toast({ title: 'A rota já está na melhor ordem possível!' })
         }
+      } else {
+        toast({ title: 'Não foi possível otimizar a rota.', variant: 'destructive' })
       }
     } catch (e) {
       toast({ title: 'Erro ao otimizar', variant: 'destructive' })
@@ -296,7 +268,10 @@ export function TimelineView({
                   }
                   toast({ title: 'Meio de transporte atualizado para o dia!' })
                 } catch (e) {
-                  toast({ title: 'Erro ao atualizar meio de transporte', variant: 'destructive' })
+                  toast({
+                    title: 'Erro de rede. Não foi possível atualizar o transporte.',
+                    variant: 'destructive',
+                  })
                 }
               }}
             >
@@ -500,8 +475,12 @@ export function TimelineView({
                           } else {
                             await updateItinerario(event.id, { meio_transporte: val })
                           }
-                        } catch {
-                          /* intentionally ignored */
+                          toast({ title: 'Transporte atualizado com sucesso!' })
+                        } catch (e) {
+                          toast({
+                            title: 'Erro de rede. Não foi possível atualizar o transporte.',
+                            variant: 'destructive',
+                          })
                         }
                       }}
                     >

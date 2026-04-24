@@ -1,7 +1,12 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getTrip, Trip } from '@/services/trips'
-import { getItinerarioByTrip, deleteItinerario, ItinerarioEvent } from '@/services/itinerario'
+import {
+  getItinerarioByTrip,
+  deleteItinerario,
+  updateItinerario,
+  ItinerarioEvent,
+} from '@/services/itinerario'
 import { getComentario } from '@/services/comentarios'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
