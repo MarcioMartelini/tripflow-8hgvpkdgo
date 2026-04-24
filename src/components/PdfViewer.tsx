@@ -7,12 +7,19 @@ interface PdfViewerProps {
   title: string
 }
 
+import pb from '@/lib/pocketbase/client'
+
 export function PdfViewer({ url, title }: PdfViewerProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [fileType, setFileType] = useState<'image' | 'pdf' | 'unknown'>('unknown')
 
   const isValidUrl = Boolean(url && url.trim() !== '')
+
+  const finalUrl =
+    isValidUrl && !url.includes('token=') && !url.startsWith('blob:') && !url.startsWith('data:')
+      ? `${url}${url.includes('?') ? '&' : '?'}token=${pb.authStore.token}`
+      : url
 
   useEffect(() => {
     if (!isValidUrl) {
@@ -25,7 +32,7 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
     setError(false)
 
     try {
-      const urlWithoutQuery = url.split('?')[0].toLowerCase()
+      const urlWithoutQuery = finalUrl.split('?')[0].toLowerCase()
       const isImg = urlWithoutQuery.match(/\.(jpeg|jpg|gif|png|webp|svg)$/) != null
 
       if (isImg) {
@@ -38,7 +45,7 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
       console.error('Error determining file type', e)
       setFileType('pdf')
     }
-  }, [url, isValidUrl])
+  }, [finalUrl, isValidUrl])
 
   const handleLoad = () => setLoading(false)
   const handleError = () => {
@@ -66,7 +73,7 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
         </p>
         {isValidUrl && (
           <Button asChild variant="outline">
-            <a href={url} target="_blank" rel="noreferrer" download>
+            <a href={finalUrl} target="_blank" rel="noreferrer" download>
               <Download className="h-4 w-4 mr-2" /> Tentar Baixar
             </a>
           </Button>
@@ -87,7 +94,7 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
       {fileType === 'image' ? (
         <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
           <img
-            src={url}
+            src={finalUrl}
             alt={title}
             className="max-w-full max-h-full object-contain shadow-sm"
             onLoad={handleLoad}
@@ -96,7 +103,7 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
         </div>
       ) : (
         <embed
-          src={url}
+          src={finalUrl}
           type="application/pdf"
           title={title}
           className="w-full h-full flex-1 border-0 bg-white"

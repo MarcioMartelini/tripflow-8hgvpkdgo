@@ -336,7 +336,7 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
           </div>
 
           <div className="space-y-2 mt-2">
-            <Label>Anexos (PDF)</Label>
+            <Label>Anexos (PDF e Imagens)</Label>
             <div className="space-y-2">
               {existingFiles.map((file, i) => (
                 <div
@@ -376,16 +376,18 @@ export function ReservaDialog({ open, onOpenChange, tripId, reserva, onSuccess }
             </div>
             <Input
               type="file"
-              accept="application/pdf"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
               multiple
               onChange={(e: any) => {
                 if (e.target.files) {
                   const addedFiles = Array.from(e.target.files) as File[]
-                  const invalidFiles = addedFiles.filter((f) => f.type !== 'application/pdf')
+                  const invalidFiles = addedFiles.filter(
+                    (f) => f.type !== 'application/pdf' && !f.type.startsWith('image/'),
+                  )
                   if (invalidFiles.length > 0) {
                     setFieldErrors((prev) => ({
                       ...prev,
-                      arquivo: 'Apenas arquivos PDF são permitidos.',
+                      arquivo: 'Apenas arquivos PDF e imagens são permitidos.',
                     }))
                   } else {
                     setNewFiles((prev) => [...prev, ...addedFiles])
