@@ -2,6 +2,17 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { cn } from '@/lib/utils'
+import {
   getComentarios,
   createComentario,
   deleteComentario,
@@ -25,6 +36,8 @@ export function ActivityComments({ atividadeId, tripId }: { atividadeId: string;
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null)
+  const [validationError, setValidationError] = useState('')
 
   const loadComentarios = async (isRefresh = false) => {
     if (!isRefresh) setLoading(true)
@@ -50,7 +63,12 @@ export function ActivityComments({ atividadeId, tripId }: { atividadeId: string;
   })
 
   const handleAdd = async () => {
-    if (!texto.trim() || !user) return
+    if (!user) return
+    if (!texto.trim()) {
+      setValidationError('O comentário não pode ser vazio.')
+      return
+    }
+    setValidationError('')
     setSubmitting(true)
     try {
       await createComentario({
@@ -69,13 +87,16 @@ export function ActivityComments({ atividadeId, tripId }: { atividadeId: string;
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!commentToDelete) return
     try {
-      await deleteComentario(id)
-      setComentarios((prev) => prev.filter((c) => c.id !== id))
-      toast({ title: 'Comentário deletado.' })
+      await deleteComentario(commentToDelete)
+      setComentarios((prev) => prev.filter((c) => c.id !== commentToDelete))
+      toast({ title: 'Comentário deletado com sucesso!' })
     } catch (err) {
       toast({ title: 'Erro ao deletar comentário', variant: 'destructive' })
+    } finally {
+      setCommentToDelete(null)
     }
   }
 
@@ -126,8 +147,14 @@ export function ActivityComments({ atividadeId, tripId }: { atividadeId: string;
         <Textarea
           placeholder="Compartilhe sua opinião sobre esta atividade"
           value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          className="min-h-[80px] text-sm resize-none bg-white"
+          onChange={(e) => {
+            setTexto(e.target.value)
+            if (e.target.value.trim()) setValidationError('')
+          }}
+          className={cn(
+            'min-h-[80px] text-sm resize-none bg-white',
+            validationError ? 'border-red-500 focus-visible:ring-red-500' : '',
+          )}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
@@ -135,13 +162,9 @@ export function ActivityComments({ atividadeId, tripId }: { atividadeId: string;
             }
           }}
         />
+        {validationError && <p className="text-xs text-red-500 font-medium">{validationError}</p>}
         <div className="flex justify-end">
-          <Button
-            size="sm"
-            onClick={handleAdd}
-            disabled={submitting || !texto.trim()}
-            className="w-full sm:w-auto"
-          >
+          <Button size="sm" onClick={handleAdd} disabled={submitting} className="w-full sm:w-auto">
             {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             {submitting ? 'Enviando...' : 'Enviar'}
           </Button>
@@ -188,7 +211,7 @@ export function ActivityComments({ atividadeId, tripId }: { atividadeId: string;
                   </div>
                   {isAuthor && (
                     <button
-                      onClick={() => handleDelete(c.id)}
+                      onClick={() => setCommentToDelete(c.id)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500 shrink-0 self-start p-1"
                       title="Deletar comentário"
                     >
@@ -201,6 +224,23 @@ export function ActivityComments({ atividadeId, tripId }: { atividadeId: string;
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!commentToDelete} onOpenChange={(o) => !o && setCommentToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deletar Comentário</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja deletar este comentário?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={handleDelete}>
+              Sim, deletar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
