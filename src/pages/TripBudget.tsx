@@ -29,7 +29,7 @@ export default function TripBudget() {
   const handleGeneratePDF = async () => {
     try {
       setIsGeneratingPDF(true)
-      await generatePDF('pdf-content', `Orcamento_${trip?.title || 'Viagem'}`)
+      await generatePDF('pdf-content', `Orcamento_Viagem_${trip?.title || 'Viagem'}`)
       toast({ title: 'PDF gerado com sucesso!' })
     } catch (err) {
       toast({ title: 'Erro ao gerar PDF', variant: 'destructive' })

@@ -8,19 +8,27 @@ declare global {
   }
 }
 
-async function getBase64ImageFromUrl(imageUrl: string): Promise<string> {
+async function getBase64ImageFromUrl(
+  imageUrl: string,
+): Promise<{ base64: string; width: number; height: number }> {
   try {
     const res = await fetch(imageUrl)
     const blob = await res.blob()
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result as string)
+      reader.onloadend = () => {
+        const base64 = reader.result as string
+        const img = new Image()
+        img.onload = () => resolve({ base64, width: img.width, height: img.height })
+        img.onerror = reject
+        img.src = base64
+      }
       reader.onerror = reject
       reader.readAsDataURL(blob)
     })
   } catch (e) {
     console.error('Failed to load logo', e)
-    return ''
+    return { base64: '', width: 0, height: 0 }
   }
 }
 
@@ -48,7 +56,7 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
   const element = document.getElementById(elementId)
   if (!element) throw new Error('Element not found')
 
-  const logoBase64 = await getBase64ImageFromUrl(logoUrl)
+  const logoData = await getBase64ImageFromUrl(logoUrl)
 
   const originalWidth = element.style.width
   const originalMaxWidth = element.style.maxWidth
@@ -57,6 +65,11 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
   element.style.width = '1024px'
   element.style.maxWidth = '1024px'
   element.style.margin = '0'
+
+  const spacer = document.createElement('div')
+  spacer.style.height = '80px'
+  spacer.id = 'pdf-spacer'
+  element.insertBefore(spacer, element.firstChild)
 
   // Hide elements with 'print-hidden' class
   const printHiddenElements = element.querySelectorAll('.print-hidden')
@@ -78,6 +91,10 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
   element.style.width = originalWidth
   element.style.maxWidth = originalMaxWidth
   element.style.margin = originalMargin
+
+  if (spacer.parentNode) {
+    spacer.parentNode.removeChild(spacer)
+  }
 
   // Restore elements
   printHiddenElements.forEach((el: any, index) => {
@@ -101,13 +118,13 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
   let position = 0
 
   const logoWidth = 40
-  const logoHeight = 15
+  const logoHeight = logoData.height ? (logoData.height / logoData.width) * logoWidth : 15
 
   const addHeader = () => {
-    if (logoBase64) {
+    if (logoData.base64) {
       pdf.setFillColor(255, 255, 255)
       pdf.rect(5, 5, logoWidth + 4, logoHeight + 4, 'F')
-      pdf.addImage(logoBase64, 'PNG', 7, 7, logoWidth, logoHeight)
+      pdf.addImage(logoData.base64, 'PNG', 7, 7, logoWidth, logoHeight)
     }
   }
 
@@ -123,6 +140,6 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
     heightLeft -= pageHeight
   }
 
-  const fileName = `${filenamePrefix.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`
+  const fileName = `${filenamePrefix.replace(/\s+/g, '_')}.pdf`
   pdf.save(fileName)
 }
