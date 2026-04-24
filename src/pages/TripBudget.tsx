@@ -2,6 +2,9 @@ import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getTrip, Trip } from '@/services/trips'
 import { getOrcamentos, getDespesas, OrcamentoPlanejado, Despesa } from '@/services/finances'
+import { getTickets, Ticket } from '@/services/tickets'
+import { getReservas, Reserva } from '@/services/reservas'
+import { getItinerarioByTrip, ItinerarioEvent } from '@/services/itinerario'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
@@ -21,6 +24,9 @@ export default function TripBudget() {
   const baseCurrency = trip?.moeda || user?.moeda_padrao || 'BRL'
   const [orcamentos, setOrcamentos] = useState<OrcamentoPlanejado[]>([])
   const [despesas, setDespesas] = useState<Despesa[]>([])
+  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [reservas, setReservas] = useState<Reserva[]>([])
+  const [itinerarios, setItinerarios] = useState<ItinerarioEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
@@ -28,14 +34,20 @@ export default function TripBudget() {
     if (!tripId) return
     try {
       setError(false)
-      const [tripData, oData, dData] = await Promise.all([
+      const [tripData, oData, dData, tData, rData, iData] = await Promise.all([
         getTrip(tripId),
         getOrcamentos(tripId),
         getDespesas(tripId),
+        getTickets(tripId),
+        getReservas(tripId),
+        getItinerarioByTrip(tripId),
       ])
       setTrip(tripData)
       setOrcamentos(oData)
       setDespesas(dData)
+      setTickets(tData)
+      setReservas(rData)
+      setItinerarios(iData)
     } catch (err) {
       setError(true)
     } finally {
@@ -49,10 +61,13 @@ export default function TripBudget() {
 
   useRealtime('orcamento_planejado', loadData)
   useRealtime('despesas', loadData)
+  useRealtime('tickets', loadData)
+  useRealtime('reservas', loadData)
+  useRealtime('itinerario', loadData)
 
   const categoryData = useMemo(
-    () => calculateBudgetData(orcamentos, despesas, baseCurrency),
-    [orcamentos, despesas, baseCurrency],
+    () => calculateBudgetData(orcamentos, despesas, tickets, reservas, itinerarios, baseCurrency),
+    [orcamentos, despesas, tickets, reservas, itinerarios, baseCurrency],
   )
 
   if (loading) {

@@ -13,6 +13,8 @@ export interface ItinerarioEvent {
   local?: string
   notas?: string
   arquivos?: string[]
+  preco?: number
+  moeda?: string
   expand?: any
 
   // Aliases for backward compatibility in some components

@@ -49,6 +49,8 @@ export function ActivityModal({
     atividade: '',
     local: '',
     notas: '',
+    preco: '',
+    moeda: 'BRL',
   })
 
   useEffect(() => {
@@ -62,6 +64,8 @@ export function ActivityModal({
           atividade: initialData.atividade || '',
           local: initialData.local || '',
           notas: initialData.notas || '',
+          preco: initialData.preco?.toString() || '',
+          moeda: initialData.moeda || 'BRL',
         })
       } else {
         setForm({
@@ -72,6 +76,8 @@ export function ActivityModal({
           atividade: '',
           local: '',
           notas: '',
+          preco: '',
+          moeda: 'BRL',
         })
       }
       setFiles([]) // Reset files on open
@@ -111,6 +117,8 @@ export function ActivityModal({
       formData.append('atividade', form.atividade)
       formData.append('local', form.local)
       formData.append('notas', form.notas)
+      if (form.preco) formData.append('preco', form.preco)
+      formData.append('moeda', form.moeda)
 
       files.forEach((file) => {
         formData.append('arquivos', file)
@@ -210,6 +218,35 @@ export function ActivityModal({
               value={form.local}
               onChange={(e) => setForm({ ...form, local: e.target.value })}
             />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="preco">Custo (Opcional)</Label>
+              <Input
+                id="preco"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={form.preco}
+                onChange={(e) => setForm({ ...form, preco: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="moeda">Moeda</Label>
+              <Select value={form.moeda} onValueChange={(v) => setForm({ ...form, moeda: v })}>
+                <SelectTrigger id="moeda">
+                  <SelectValue placeholder="Selecione a moeda" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BRL">BRL (R$)</SelectItem>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="EUR">EUR (€)</SelectItem>
+                  <SelectItem value="GBP">GBP (£)</SelectItem>
+                  <SelectItem value="AUD">AUD (A$)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="notas">Notas (Opcional)</Label>

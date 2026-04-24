@@ -2,8 +2,6 @@ import pb from '@/lib/pocketbase/client'
 
 export interface Ticket {
   id: string
-  collectionId: string
-  collectionName: string
   viagem_id: string
   tipo: string
   numero_confirmacao?: string
@@ -17,24 +15,11 @@ export interface Ticket {
   preco?: number
   moeda?: string
   status?: string
-  arquivo?: string | File | null
+  arquivo?: string
 }
 
 export const getTickets = async (tripId: string): Promise<Ticket[]> => {
   return await pb.collection('tickets').getFullList<Ticket>({
     filter: `viagem_id = "${tripId}"`,
-    sort: 'data_saida',
   })
-}
-
-export const createTicket = async (data: any): Promise<Ticket> => {
-  return await pb.collection('tickets').create<Ticket>(data)
-}
-
-export const updateTicket = async (id: string, data: any): Promise<Ticket> => {
-  return await pb.collection('tickets').update<Ticket>(id, data)
-}
-
-export const deleteTicket = async (id: string): Promise<void> => {
-  await pb.collection('tickets').delete(id)
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-24T00:24:40.445Z",
+  "generatedAt": "2026-04-24T00:31:28.226Z",
   "collections": [
     {
       "name": "users",
@@ -374,6 +374,18 @@
         {
           "name": "arquivos",
           "type": "file",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "preco",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "moeda",
+          "type": "text",
           "required": false,
           "system": false
         }
