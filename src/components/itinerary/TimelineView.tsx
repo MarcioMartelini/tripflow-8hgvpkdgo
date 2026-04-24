@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ItinerarioEvent, updateItinerario } from '@/services/itinerario'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { PdfViewerDialog } from '@/components/PdfViewerDialog'
+import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import {
   Plane,
@@ -26,13 +26,6 @@ import {
 import pb from '@/lib/pocketbase/client'
 import { cn } from '@/lib/utils'
 import { ActivityComments } from './ActivityComments'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 interface TimelineViewProps {
   events: ItinerarioEvent[]
@@ -53,6 +46,8 @@ const getIcon = (tipo: string) => {
       return <Camera className="h-4 w-4" />
     case 'refeição':
       return <Utensils className="h-4 w-4" />
+    case 'trem':
+      return <Train className="h-4 w-4" />
     default:
       return <CircleDot className="h-4 w-4" />
   }
@@ -67,7 +62,6 @@ export function TimelineView({
   onUpdateAllEvents,
 }: TimelineViewProps) {
   const { toast } = useToast()
-  const [previewFile, setPreviewFile] = useState<{ url: string; title: string } | null>(null)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [legs, setLegs] = useState<Record<string, { distance: number; duration: number }>>({})
 
@@ -161,7 +155,7 @@ export function TimelineView({
     try {
       await Promise.all(
         suggestion.optimized.map((ev, i) => {
-          if (ev.hora_inicio !== times[i]) {
+          if (ev.hora_inicio !== times[i] && !(ev as any)._source) {
             return updateItinerario(ev.id, { hora_inicio: times[i] })
           }
         }),
@@ -272,6 +266,8 @@ export function TimelineView({
       <div className="relative pl-6 border-l-2 border-slate-200 space-y-6 py-4">
         {events.map((event, index) => {
           const isExpanded = expandedIds.has(event.id)
+          const isSourceItinerario =
+            !(event as any)._source || (event as any)._source === 'itinerario'
 
           // Find next event with coordinates to show leg
           let leg = null
@@ -285,9 +281,9 @@ export function TimelineView({
           }
 
           return (
-            <div key={event.id} className="relative group flex flex-col gap-2">
+            <div key={`${event.id}-${index}`} className="relative group flex flex-col gap-2">
               <div className="absolute -left-[35px] top-1 bg-white border-2 border-primary text-primary rounded-full p-1.5 shadow-sm">
-                {getIcon(event.tipo)}
+                {getIcon(event.tipo || '')}
               </div>
               <Card
                 className={cn(
@@ -306,7 +302,7 @@ export function TimelineView({
                           {event.hora_inicio || '--:--'} {event.hora_fim && `- ${event.hora_fim}`}
                         </span>
                         <span className="text-xs text-slate-500 capitalize px-2 py-0.5 bg-slate-50 border rounded">
-                          {event.tipo}
+                          {event.tipo || 'outro'}
                         </span>
                         {(event as any).google_event_id && (
                           <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 border border-blue-100 rounded flex items-center gap-1">
@@ -334,14 +330,11 @@ export function TimelineView({
                                 key={idx}
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  const url = pb.files.getURL(event as any, arquivo)
-                                  setPreviewFile({
-                                    url,
-                                    title: `Itinerário - ${event.atividade} - PDF ${
-                                      arr.length > 1 ? idx + 1 : ''
-                                    }`,
-                                  })
+                                  const recordToUse = (event as any)._original || event
+                                  const url = pb.files.getURL(recordToUse, arquivo)
+                                  window.open(url, '_blank')
                                 }}
+                                aria-label={`Visualizar PDF de ${event.atividade}`}
                                 className="flex items-center gap-1.5 px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs transition-colors border border-slate-200"
                                 title={arquivo}
                               >
@@ -359,23 +352,34 @@ export function TimelineView({
                       className="flex gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity w-full sm:w-auto justify-end border-t sm:border-t-0 pt-3 sm:pt-0"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Button variant="outline" size="sm" onClick={() => onEdit(event)}>
-                        <Edit2 className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Editar</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => onDelete(event)}
-                      >
-                        <Trash2 className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Deletar</span>
-                      </Button>
+                      {isSourceItinerario ? (
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => onEdit(event)}>
+                            <Edit2 className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Editar</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => onDelete(event)}
+                          >
+                            <Trash2 className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Deletar</span>
+                          </Button>
+                        </>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="bg-slate-100 text-slate-500 hover:bg-slate-100 mt-1 sm:mt-0 whitespace-nowrap"
+                        >
+                          Via {(event as any)._source === 'tickets' ? 'Passagem' : 'Reserva'}
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
-                  {isExpanded && (
+                  {isExpanded && isSourceItinerario && (
                     <div
                       className="px-4 pb-4 sm:px-5 sm:pb-5 pt-0 cursor-default"
                       onClick={(e) => e.stopPropagation()}
@@ -398,12 +402,6 @@ export function TimelineView({
           )
         })}
       </div>
-
-      <PdfViewerDialog
-        url={previewFile?.url || null}
-        title={previewFile?.title || ''}
-        onClose={() => setPreviewFile(null)}
-      />
     </div>
   )
 }

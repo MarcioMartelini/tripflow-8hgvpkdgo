@@ -36,7 +36,7 @@ import {
   Map as MapIcon,
   Navigation,
 } from 'lucide-react'
-import { format, parseISO, isSameDay, eachDayOfInterval, addDays, startOfDay } from 'date-fns'
+import { format, isSameDay, eachDayOfInterval, addDays, startOfDay } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { ptBR } from 'date-fns/locale'
 
@@ -46,6 +46,7 @@ import { ActivityModal } from '@/components/itinerary/ActivityModal'
 import { TimelineView } from '@/components/itinerary/TimelineView'
 import { WeeklyGrid } from '@/components/itinerary/WeeklyGrid'
 import { MapView } from '@/components/itinerary/MapView'
+import pb from '@/lib/pocketbase/client'
 
 export default function TripItinerary() {
   const { id } = useParams<{ id: string }>()
@@ -53,6 +54,8 @@ export default function TripItinerary() {
 
   const [trip, setTrip] = useState<Trip | null>(null)
   const [events, setEvents] = useState<ItinerarioEvent[]>([])
+  const [tickets, setTickets] = useState<any[]>([])
+  const [reservas, setReservas] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
@@ -94,10 +97,16 @@ export default function TripItinerary() {
     if (!id) return
     setError(false)
     try {
-      const tripData = await getTrip(id)
+      const [tripData, eventsData, ticketsData, reservasData] = await Promise.all([
+        getTrip(id),
+        getItinerarioByTrip(id),
+        pb.collection('tickets').getFullList({ filter: `viagem_id="${id}"` }),
+        pb.collection('reservas').getFullList({ filter: `viagem_id="${id}"` }),
+      ])
       setTrip(tripData)
-      const eventsData = await getItinerarioByTrip(id)
       setEvents(eventsData)
+      setTickets(ticketsData)
+      setReservas(reservasData)
 
       // Initialize selected date on first load
       if (loading && tripData.start_date) {
@@ -119,6 +128,12 @@ export default function TripItinerary() {
   }, [id])
 
   useRealtime('itinerario', (e) => {
+    if (e.record.viagem_id === id) loadData()
+  })
+  useRealtime('tickets', (e) => {
+    if (e.record.viagem_id === id) loadData()
+  })
+  useRealtime('reservas', (e) => {
     if (e.record.viagem_id === id) loadData()
   })
 
@@ -175,10 +190,57 @@ export default function TripItinerary() {
     return Array.from({ length: 7 }).map((_, i) => addDays(selectedDate, i))
   }, [selectedDate])
 
+  const allCombinedEvents = useMemo(() => {
+    const itinerarioEvents = events.map((e) => ({ ...e, _source: 'itinerario' }))
+
+    const mappedTickets = tickets.map((t) => ({
+      id: t.id,
+      viagem_id: t.viagem_id,
+      data: t.data_saida || t.created,
+      hora_inicio: t.hora_saida || '',
+      hora_fim: t.hora_chegada || '',
+      atividade: `Passagem: ${t.origem || 'Origem'} ➔ ${t.destino || 'Destino'}`,
+      tipo: t.tipo,
+      local: t.companhia || '',
+      notas: `Confirmação: ${t.numero_confirmacao || '-'}`,
+      arquivos: t.arquivo,
+      categoria: 'transporte',
+      _source: 'tickets',
+      _original: t,
+    }))
+
+    const mappedReservas = reservas.map((r) => ({
+      id: r.id,
+      viagem_id: r.viagem_id,
+      data: r.data_checkin || r.created,
+      hora_inicio: r.hora_checkin || '',
+      hora_fim: r.hora_checkout || '',
+      atividade: `Reserva: ${r.nome}`,
+      tipo: r.tipo,
+      local: r.local || '',
+      notas: `Confirmação: ${r.numero_confirmacao || '-'}`,
+      arquivos: r.arquivo,
+      categoria:
+        r.tipo === 'hotel'
+          ? 'hospedagem'
+          : r.tipo === 'restaurante'
+            ? 'alimentação'
+            : r.tipo === 'atividade'
+              ? 'atividade'
+              : 'outro',
+      _source: 'reservas',
+      _original: r,
+    }))
+
+    return [...itinerarioEvents, ...mappedTickets, ...mappedReservas] as ItinerarioEvent[]
+  }, [events, tickets, reservas])
+
   const dailyEvents = useMemo(() => {
     const selectedDateString = format(selectedDate, 'yyyy-MM-dd')
-    return events.filter((e) => e.data.substring(0, 10) === selectedDateString)
-  }, [events, selectedDate])
+    return allCombinedEvents
+      .filter((e) => (e.data || '').substring(0, 10) === selectedDateString)
+      .sort((a, b) => (a.hora_inicio || '24:00').localeCompare(b.hora_inicio || '24:00'))
+  }, [allCombinedEvents, selectedDate])
 
   const filteredDailyEvents = useMemo(() => {
     let filtered = dailyEvents
@@ -420,7 +482,7 @@ export default function TripItinerary() {
             {viewMode === 'weekly' && (
               <WeeklyGrid
                 days={weeklyDays}
-                events={events}
+                events={allCombinedEvents}
                 onDayClick={(d) => {
                   setSelectedDate(d)
                   setViewMode('daily')
@@ -450,7 +512,9 @@ export default function TripItinerary() {
             <div className="space-y-6">
               {allTripDays.map((day) => {
                 const dayString = format(day, 'yyyy-MM-dd')
-                const dayEvents = events.filter((e) => e.data.substring(0, 10) === dayString)
+                const dayEvents = allCombinedEvents.filter(
+                  (e) => (e.data || '').substring(0, 10) === dayString,
+                )
                 if (dayEvents.length === 0) return null
 
                 // Sort by time
@@ -488,7 +552,7 @@ export default function TripItinerary() {
                   </div>
                 )
               })}
-              {events.length === 0 && (
+              {allCombinedEvents.length === 0 && (
                 <p className="text-slate-500">Nenhuma atividade programada para esta viagem.</p>
               )}
             </div>

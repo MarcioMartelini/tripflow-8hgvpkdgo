@@ -24,7 +24,6 @@ interface Props {
   ticket: Ticket
   onEdit: (t: Ticket) => void
   onDelete: () => void
-  onPreview?: (url: string, title: string) => void
 }
 
 export function TicketCard({ ticket, onEdit, onDelete }: Props) {
@@ -130,15 +129,9 @@ export function TicketCard({ ticket, onEdit, onDelete }: Props) {
                       className="h-8 text-xs"
                       onClick={() => {
                         const url = pb.files.getURL(ticket, f)
-                        if (onPreview) {
-                          onPreview(
-                            url,
-                            `Ticket ${ticket.tipo} - PDF ${arr.length > 1 ? i + 1 : ''}`,
-                          )
-                        } else {
-                          window.open(url, '_blank')
-                        }
+                        window.open(url, '_blank')
                       }}
+                      aria-label={`Visualizar PDF de ${ticket.origem || 'Origem'} para ${ticket.destino || 'Destino'}`}
                     >
                       <FileText className="h-3 w-3 mr-1" />
                       PDF {arr.length > 1 ? i + 1 : ''}
