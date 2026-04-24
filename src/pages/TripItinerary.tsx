@@ -201,7 +201,7 @@ export default function TripItinerary() {
 
     if (eventsWithCoords.length === 1) {
       window.open(
-        `https://www.google.com/maps/search/?api=1&query=${eventsWithCoords[0].latitude},${eventsWithCoords[0].longitude}`,
+        `https://www.google.com/maps/dir/?api=1&destination=${eventsWithCoords[0].latitude},${eventsWithCoords[0].longitude}&travelmode=${travelmode}&dir_action=navigate`,
         '_blank',
       )
       return
@@ -215,7 +215,7 @@ export default function TripItinerary() {
       .map((e) => `${e.latitude},${e.longitude}`)
       .join('|')
 
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=${travelmode}`
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=${travelmode}&dir_action=navigate`
     window.open(url, '_blank')
   }
 
@@ -402,6 +402,14 @@ export default function TripItinerary() {
                 onEdit={setEventToEdit}
                 onDelete={setEventToDelete}
                 onAdd={() => setIsAddModalOpen(true)}
+                onUpdateEvent={async (id, data) => {
+                  setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)))
+                  await updateItinerario(id, data)
+                }}
+                onUpdateAllEvents={async (ids, data) => {
+                  setEvents((prev) => prev.map((e) => (ids.includes(e.id) ? { ...e, ...data } : e)))
+                  await Promise.all(ids.map((id) => updateItinerario(id, data)))
+                }}
               />
             )}
             {viewMode === 'weekly' && (
@@ -415,7 +423,19 @@ export default function TripItinerary() {
               />
             )}
             {viewMode === 'map' && (
-              <MapView events={filteredDailyEvents} trip={trip} onEditEvent={setEventToEdit} />
+              <MapView
+                events={filteredDailyEvents}
+                trip={trip}
+                onEditEvent={setEventToEdit}
+                onUpdateEvent={async (id, data) => {
+                  setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)))
+                  await updateItinerario(id, data)
+                }}
+                onUpdateAllEvents={async (ids, data) => {
+                  setEvents((prev) => prev.map((e) => (ids.includes(e.id) ? { ...e, ...data } : e)))
+                  await Promise.all(ids.map((id) => updateItinerario(id, data)))
+                }}
+              />
             )}
           </div>
 

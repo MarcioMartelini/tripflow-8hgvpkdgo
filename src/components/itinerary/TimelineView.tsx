@@ -47,6 +47,8 @@ interface TimelineViewProps {
   onEdit: (event: ItinerarioEvent) => void
   onDelete: (event: ItinerarioEvent) => void
   onAdd: () => void
+  onUpdateEvent?: (id: string, data: Partial<ItinerarioEvent>) => Promise<void>
+  onUpdateAllEvents?: (ids: string[], data: Partial<ItinerarioEvent>) => Promise<void>
 }
 
 const getIcon = (tipo: string) => {
@@ -64,7 +66,14 @@ const getIcon = (tipo: string) => {
   }
 }
 
-export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewProps) {
+export function TimelineView({
+  events,
+  onEdit,
+  onDelete,
+  onAdd,
+  onUpdateEvent,
+  onUpdateAllEvents,
+}: TimelineViewProps) {
   const { toast } = useToast()
   const [previewFile, setPreviewFile] = useState<{ url: string; title: string } | null>(null)
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
@@ -253,13 +262,22 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
               value={validEvents[0]?.meio_transporte || 'carro'}
               onValueChange={async (val) => {
                 try {
-                  await Promise.all(
-                    validEvents.map((ev) => {
-                      if (ev.meio_transporte !== val) {
-                        return updateItinerario(ev.id, { meio_transporte: val })
-                      }
-                    }),
-                  )
+                  if (onUpdateAllEvents) {
+                    const ids = validEvents
+                      .filter((ev) => ev.meio_transporte !== val)
+                      .map((ev) => ev.id)
+                    if (ids.length > 0) {
+                      await onUpdateAllEvents(ids, { meio_transporte: val })
+                    }
+                  } else {
+                    await Promise.all(
+                      validEvents.map((ev) => {
+                        if (ev.meio_transporte !== val) {
+                          return updateItinerario(ev.id, { meio_transporte: val })
+                        }
+                      }),
+                    )
+                  }
                   toast({ title: 'Meio de transporte atualizado para o dia!' })
                 } catch (e) {
                   toast({ title: 'Erro ao atualizar meio de transporte', variant: 'destructive' })
@@ -461,7 +479,11 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
                       value={event.meio_transporte || 'carro'}
                       onValueChange={async (val) => {
                         try {
-                          await updateItinerario(event.id, { meio_transporte: val })
+                          if (onUpdateEvent) {
+                            await onUpdateEvent(event.id, { meio_transporte: val })
+                          } else {
+                            await updateItinerario(event.id, { meio_transporte: val })
+                          }
                         } catch {
                           /* intentionally ignored */
                         }

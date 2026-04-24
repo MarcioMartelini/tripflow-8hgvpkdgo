@@ -18,6 +18,8 @@ interface MapViewProps {
   events: ItinerarioEvent[]
   trip: Trip
   onEditEvent: (event: ItinerarioEvent) => void
+  onUpdateEvent?: (id: string, data: Partial<ItinerarioEvent>) => Promise<void>
+  onUpdateAllEvents?: (ids: string[], data: Partial<ItinerarioEvent>) => Promise<void>
 }
 
 interface RouteInfo {
@@ -57,7 +59,13 @@ const getColor = (tipo?: string) => {
   return '#3b82f6' // blue (atividade)
 }
 
-export function MapView({ events, trip, onEditEvent }: MapViewProps) {
+export function MapView({
+  events,
+  trip,
+  onEditEvent,
+  onUpdateEvent,
+  onUpdateAllEvents,
+}: MapViewProps) {
   const { toast } = useToast()
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<any>(null)
@@ -87,13 +95,20 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
   const handleTransportModeChange = async (value: string) => {
     setTransportMode(value)
     try {
-      await Promise.all(
-        validEvents.map((ev) => {
-          if (ev.meio_transporte !== value) {
-            return updateItinerario(ev.id, { meio_transporte: value })
-          }
-        }),
-      )
+      if (onUpdateAllEvents) {
+        const ids = validEvents.filter((ev) => ev.meio_transporte !== value).map((ev) => ev.id)
+        if (ids.length > 0) {
+          await onUpdateAllEvents(ids, { meio_transporte: value })
+        }
+      } else {
+        await Promise.all(
+          validEvents.map((ev) => {
+            if (ev.meio_transporte !== value) {
+              return updateItinerario(ev.id, { meio_transporte: value })
+            }
+          }),
+        )
+      }
       toast({ title: 'Meio de transporte de todas as atividades atualizado!' })
     } catch (e) {
       toast({ title: 'Erro ao atualizar meio de transporte', variant: 'destructive' })
@@ -549,7 +564,11 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
                             value={ev.meio_transporte || 'carro'}
                             onValueChange={async (val) => {
                               try {
-                                await updateItinerario(ev.id, { meio_transporte: val })
+                                if (onUpdateEvent) {
+                                  await onUpdateEvent(ev.id, { meio_transporte: val })
+                                } else {
+                                  await updateItinerario(ev.id, { meio_transporte: val })
+                                }
                               } catch {
                                 /* intentionally ignored */
                               }
