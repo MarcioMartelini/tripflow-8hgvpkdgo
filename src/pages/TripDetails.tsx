@@ -32,6 +32,7 @@ import {
   FileText,
   Ticket,
   BarChart2,
+  Printer,
 } from 'lucide-react'
 
 export default function TripDetails() {
@@ -47,6 +48,20 @@ export default function TripDetails() {
   const [openTravelerModal, setOpenTravelerModal] = useState(false)
   const [travelerLoading, setTravelerLoading] = useState(false)
   const [tForm, setTForm] = useState({ nome: '', email: '', documento: '' })
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+  const handleGeneratePDF = async () => {
+    try {
+      setIsGeneratingPDF(true)
+      const { generatePDF } = await import('@/lib/pdf-utils')
+      await generatePDF('pdf-content', `Detalhes_${trip?.title || 'Viagem'}`)
+      toast({ title: 'PDF gerado com sucesso!' })
+    } catch (err) {
+      toast({ title: 'Erro ao gerar PDF', variant: 'destructive' })
+    } finally {
+      setIsGeneratingPDF(false)
+    }
+  }
 
   const loadData = async () => {
     if (!id) return
@@ -131,13 +146,18 @@ export default function TripDetails() {
   if (!trip) return null
 
   return (
-    <div className="container py-8 px-4 animate-fade-in space-y-8">
-      <div>
-        <Button variant="ghost" className="mb-4 -ml-4 text-slate-500" asChild>
+    <div id="pdf-content" className="container py-8 px-4 animate-fade-in space-y-8 bg-slate-50">
+      <div className="print-hidden flex justify-between items-center mb-4">
+        <Button variant="ghost" className="-ml-4 text-slate-500" asChild>
           <Link to="/trips">
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Viagens
           </Link>
         </Button>
+        <Button onClick={handleGeneratePDF} variant="outline" disabled={isGeneratingPDF}>
+          <Printer className="h-4 w-4 mr-2" /> {isGeneratingPDF ? 'Gerando...' : 'Gerar PDF'}
+        </Button>
+      </div>
+      <div>
         <div className="flex flex-col md:flex-row justify-between gap-4 items-start md:items-center">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">{trip.title}</h1>
@@ -158,7 +178,7 @@ export default function TripDetails() {
                 <span className="font-medium">{formatCurrency(trip.budget_total, trip.moeda)}</span>
               </div>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 w-full">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 w-full print-hidden">
               <Button variant="outline" className="w-full" asChild>
                 <Link to={`/documents/${trip.id}`}>
                   <FileText className="mr-2 h-4 w-4" /> Documentos
@@ -202,7 +222,7 @@ export default function TripDetails() {
           </h2>
           <Dialog open={openTravelerModal} onOpenChange={setOpenTravelerModal}>
             <DialogTrigger asChild>
-              <Button size="sm" className="gap-2 w-full sm:w-auto">
+              <Button size="sm" className="gap-2 w-full sm:w-auto print-hidden">
                 <UserPlus className="h-4 w-4" /> Adicionar Viajante
               </Button>
             </DialogTrigger>
@@ -289,7 +309,7 @@ export default function TripDetails() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-slate-400 hover:text-red-500 hover:bg-red-50 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="text-slate-400 hover:text-red-500 hover:bg-red-50 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity print-hidden"
                     onClick={() => handleRemoveTraveler(t.id)}
                     title="Remover viajante"
                   >

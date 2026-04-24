@@ -23,6 +23,7 @@ import {
   Plus,
   Download,
   Loader2,
+  Printer,
 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { TicketCard } from '@/components/tickets/TicketCard'
@@ -52,6 +53,20 @@ export default function TripTicketsReservations() {
 
   const [previewFile, setPreviewFile] = useState<{ url: string; title: string } | null>(null)
   const [downloadingAll, setDownloadingAll] = useState(false)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+  const handleGeneratePDF = async () => {
+    try {
+      setIsGeneratingPDF(true)
+      const { generatePDF } = await import('@/lib/pdf-utils')
+      await generatePDF('pdf-content', `Tickets_Reservas_${trip?.title || 'Viagem'}`)
+      toast({ title: 'PDF gerado com sucesso!' })
+    } catch (err) {
+      toast({ title: 'Erro ao gerar PDF', variant: 'destructive' })
+    } finally {
+      setIsGeneratingPDF(false)
+    }
+  }
 
   const loadData = async () => {
     if (!tripId) return
@@ -254,23 +269,24 @@ export default function TripTicketsReservations() {
   )
 
   return (
-    <div className="container py-8 px-4 animate-fade-in space-y-6">
-      <div>
+    <div id="pdf-content" className="container py-8 px-4 animate-fade-in space-y-6 bg-slate-50">
+      <div className="print-hidden">
         <Button variant="ghost" className="mb-4 -ml-4 text-slate-500" asChild>
           <Link to={`/trips/${trip.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Viagem
           </Link>
         </Button>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">Tickets e Reservas</h1>
-            <p className="text-slate-500 mt-1">{trip.title}</p>
-          </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Tickets e Reservas</h1>
+          <p className="text-slate-500 mt-1">{trip.title}</p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 print-hidden">
           <TabsList>
             <TabsTrigger value="tickets" className="px-6">
               Tickets
@@ -281,6 +297,19 @@ export default function TripTicketsReservations() {
           </TabsList>
 
           <div className="flex w-full sm:w-auto items-center gap-2 flex-wrap sm:flex-nowrap">
+            <Button
+              variant="outline"
+              onClick={handleGeneratePDF}
+              disabled={isGeneratingPDF}
+              className="shrink-0"
+            >
+              {isGeneratingPDF ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Printer className="h-4 w-4 mr-2" />
+              )}
+              Gerar PDF
+            </Button>
             <Button
               variant="outline"
               onClick={handleDownloadAll}

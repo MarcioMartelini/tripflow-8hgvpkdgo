@@ -7,9 +7,11 @@ import { getReservas, Reserva } from '@/services/reservas'
 import { getItinerarioByTrip, ItinerarioEvent } from '@/services/itinerario'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Printer, AlertCircle } from 'lucide-react'
+import { generatePDF } from '@/lib/pdf-utils'
 import { calculateBudgetData } from '@/lib/budget-utils'
 import { SummaryCards } from '@/components/trip-budget/SummaryCards'
 import { ComparativeChart } from '@/components/trip-budget/ComparativeChart'
@@ -19,8 +21,22 @@ import { ExpenseManager } from '@/components/trip-budget/ExpenseManager'
 export default function TripBudget() {
   const { tripId } = useParams<{ tripId: string }>()
   const { user } = useAuth()
+  const { toast } = useToast()
 
   const [trip, setTrip] = useState<Trip | null>(null)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+  const handleGeneratePDF = async () => {
+    try {
+      setIsGeneratingPDF(true)
+      await generatePDF('pdf-content', `Orcamento_${trip?.title || 'Viagem'}`)
+      toast({ title: 'PDF gerado com sucesso!' })
+    } catch (err) {
+      toast({ title: 'Erro ao gerar PDF', variant: 'destructive' })
+    } finally {
+      setIsGeneratingPDF(false)
+    }
+  }
   const baseCurrency = trip?.moeda || user?.moeda_padrao || 'BRL'
   const [orcamentos, setOrcamentos] = useState<OrcamentoPlanejado[]>([])
   const [despesas, setDespesas] = useState<Despesa[]>([])
@@ -96,24 +112,25 @@ export default function TripBudget() {
   }
 
   return (
-    <div className="container py-8 px-4 animate-fade-in space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
+    <div id="pdf-content" className="container py-8 px-4 animate-fade-in space-y-8 bg-slate-50">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <Button variant="ghost" className="mb-4 -ml-4 text-slate-500" asChild>
+          <Button variant="ghost" className="mb-4 -ml-4 text-slate-500 print-hidden" asChild>
             <Link to={`/trips/${tripId}`}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Voltar
             </Link>
           </Button>
           <h1 className="text-3xl font-bold text-slate-900">Orçamento de {trip.title}</h1>
+          <p className="text-sm text-muted-foreground">Moeda base: {baseCurrency}</p>
         </div>
-        <Button onClick={() => window.print()} variant="outline">
-          <Printer className="h-4 w-4 mr-2" /> Gerar PDF
+        <Button
+          onClick={handleGeneratePDF}
+          variant="outline"
+          className="print-hidden"
+          disabled={isGeneratingPDF}
+        >
+          <Printer className="h-4 w-4 mr-2" /> {isGeneratingPDF ? 'Gerando...' : 'Gerar PDF'}
         </Button>
-      </div>
-
-      <div className="hidden print:block mb-8">
-        <h1 className="text-2xl font-bold">Relatório de Orçamento - {trip.title}</h1>
-        <p className="text-sm text-muted-foreground">Moeda base: {baseCurrency}</p>
       </div>
 
       <SummaryCards data={categoryData} baseCurrency={baseCurrency} trip={trip} />

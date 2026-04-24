@@ -18,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { ArrowLeft, Plus, LayoutGrid, List, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Plus, LayoutGrid, List, AlertTriangle, Printer } from 'lucide-react'
 import { format, parseISO, isSameDay, eachDayOfInterval, addDays, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -42,6 +42,20 @@ export default function TripItinerary() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [eventToEdit, setEventToEdit] = useState<ItinerarioEvent | null>(null)
   const [eventToDelete, setEventToDelete] = useState<ItinerarioEvent | null>(null)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+
+  const handleGeneratePDF = async () => {
+    try {
+      setIsGeneratingPDF(true)
+      const { generatePDF } = await import('@/lib/pdf-utils')
+      await generatePDF('pdf-content', `Itinerario_${trip?.title || 'Viagem'}`)
+      toast({ title: 'PDF gerado com sucesso!' })
+    } catch (err) {
+      toast({ title: 'Erro ao gerar PDF', variant: 'destructive' })
+    } finally {
+      setIsGeneratingPDF(false)
+    }
+  }
 
   const loadData = async () => {
     if (!id) return
@@ -128,19 +142,27 @@ export default function TripItinerary() {
   }
 
   return (
-    <div className="container py-8 px-4 animate-fade-in flex flex-col gap-6 h-full">
+    <div
+      id="pdf-content"
+      className="container py-8 px-4 animate-fade-in flex flex-col gap-6 h-full bg-slate-50"
+    >
       {/* Header */}
-      <div>
-        <Button variant="ghost" className="mb-2 -ml-4 text-slate-500" asChild>
+      <div className="print-hidden flex justify-between items-center">
+        <Button variant="ghost" className="-ml-4 text-slate-500" asChild>
           <Link to={`/trips/${trip.id}`}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Viagem
           </Link>
         </Button>
+        <Button onClick={handleGeneratePDF} variant="outline" disabled={isGeneratingPDF}>
+          <Printer className="h-4 w-4 mr-2" /> {isGeneratingPDF ? 'Gerando...' : 'Gerar PDF'}
+        </Button>
+      </div>
+      <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
             Itinerário de {trip.title}
           </h1>
-          <div className="flex bg-slate-100 p-1 rounded-lg w-full sm:w-auto">
+          <div className="flex bg-slate-100 p-1 rounded-lg w-full sm:w-auto print-hidden">
             <Button
               variant={viewMode === 'daily' ? 'default' : 'ghost'}
               size="sm"
@@ -163,7 +185,7 @@ export default function TripItinerary() {
 
       <div className="flex flex-col lg:flex-row gap-8 flex-1">
         {/* Sidebar Desktop Calendar */}
-        <div className="hidden lg:block w-[280px] shrink-0">
+        <div className="hidden lg:block w-[280px] shrink-0 print-hidden">
           <div className="bg-white p-3 rounded-lg border shadow-sm sticky top-6">
             <Calendar
               mode="single"
@@ -178,7 +200,7 @@ export default function TripItinerary() {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col gap-6">
           {/* Mobile/Tablet Date Selector */}
-          <div className="lg:hidden">
+          <div className="lg:hidden print-hidden">
             <ScrollArea className="w-full whitespace-nowrap bg-white border rounded-lg shadow-sm">
               <div className="flex w-max space-x-1 p-2">
                 {allTripDays.map((day) => (
@@ -209,7 +231,7 @@ export default function TripItinerary() {
                 <p className="text-sm text-slate-500">Exibindo próximos 7 dias</p>
               )}
             </div>
-            <Button onClick={() => setIsAddModalOpen(true)}>
+            <Button className="print-hidden" onClick={() => setIsAddModalOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Adicionar Atividade</span>
               <span className="sm:hidden">Adicionar</span>

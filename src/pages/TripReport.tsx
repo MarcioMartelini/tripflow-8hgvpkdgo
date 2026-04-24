@@ -162,80 +162,8 @@ export default function TripReport() {
   const handleGeneratePDF = async () => {
     try {
       setIsGenerating(true)
-
-      if (!window.html2canvas) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script')
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
-          script.onload = resolve
-          script.onerror = reject
-          document.head.appendChild(script)
-        })
-      }
-
-      if (!window.jspdf) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script')
-          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-          script.onload = resolve
-          script.onerror = reject
-          document.head.appendChild(script)
-        })
-      }
-
-      const element = document.getElementById('pdf-content')
-      if (!element) return
-
-      const originalWidth = element.style.width
-      const originalMaxWidth = element.style.maxWidth
-      const originalMargin = element.style.margin
-
-      // Force a fixed layout wide enough to avoid squishing the charts and tables
-      element.style.width = '1024px'
-      element.style.maxWidth = '1024px'
-      element.style.margin = '0'
-
-      await new Promise((resolve) => setTimeout(resolve, 500)) // Wait for reflow and charts
-
-      const canvas = await window.html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-      })
-
-      element.style.width = originalWidth
-      element.style.maxWidth = originalMaxWidth
-      element.style.margin = originalMargin
-
-      const imgData = canvas.toDataURL('image/png')
-      const { jsPDF } = window.jspdf
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      })
-
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-
-      let position = 0
-      const pageHeight = pdf.internal.pageSize.getHeight()
-
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight)
-
-      let heightLeft = pdfHeight - pageHeight
-      while (heightLeft > 0) {
-        position = heightLeft - pdfHeight
-        pdf.addPage()
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight)
-        heightLeft -= pageHeight
-      }
-
-      const fileName = `Relatorio_${trip?.title?.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`
-      pdf.save(fileName)
-
+      const { generatePDF } = await import('@/lib/pdf-utils')
+      await generatePDF('pdf-content', `Relatorio_${trip?.title}`)
       toast({
         title: 'Sucesso',
         description: 'Relatório gerado com sucesso!',
