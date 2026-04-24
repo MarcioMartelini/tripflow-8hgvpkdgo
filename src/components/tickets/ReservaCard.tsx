@@ -27,7 +27,7 @@ interface Props {
   onPreview: (url: string, title: string) => void
 }
 
-export function ReservaCard({ reserva, onEdit, onDelete }: Props) {
+export function ReservaCard({ reserva, onEdit, onDelete, onPreview }: Props) {
   const { user } = useAuth()
   const { toast } = useToast()
   const userCurrency = user?.moeda_padrao || 'BRL'

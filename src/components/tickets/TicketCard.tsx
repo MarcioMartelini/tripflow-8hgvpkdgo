@@ -27,7 +27,7 @@ interface Props {
   onPreview: (url: string, title: string) => void
 }
 
-export function TicketCard({ ticket, onEdit, onDelete }: Props) {
+export function TicketCard({ ticket, onEdit, onDelete, onPreview }: Props) {
   const { user } = useAuth()
   const { toast } = useToast()
   const userCurrency = user?.moeda_padrao || 'BRL'
