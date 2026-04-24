@@ -66,46 +66,37 @@ export const calculateBudgetData = (
       .filter((d) => d.categoria === cat)
       .reduce((sum, d) => sum + convertCurrency(d.valor, d.moeda, targetCurrency), 0)
 
-    // 2. Aggregate from other collections based on category logic
-    if (cat === 'hospedagem') {
-      realizedForCat += reservas
-        .filter((r) => r.tipo === 'hotel')
-        .reduce((sum, r) => sum + convertCurrency(r.preco, r.moeda, targetCurrency), 0)
-      realizedForCat += itinerarios
-        .filter((i) => i.tipo === 'hotel')
-        .reduce((sum, i) => sum + convertCurrency(i.preco, i.moeda, targetCurrency), 0)
-    } else if (cat === 'transporte') {
-      realizedForCat += tickets
-        .filter((t) => t.tipo !== 'outro')
-        .reduce((sum, t) => sum + convertCurrency(t.preco, t.moeda, targetCurrency), 0)
-      realizedForCat += itinerarios
-        .filter((i) => i.tipo === 'voo')
-        .reduce((sum, i) => sum + convertCurrency(i.preco, i.moeda, targetCurrency), 0)
-    } else if (cat === 'alimentação') {
-      realizedForCat += reservas
-        .filter((r) => r.tipo === 'restaurante')
-        .reduce((sum, r) => sum + convertCurrency(r.preco, r.moeda, targetCurrency), 0)
-      realizedForCat += itinerarios
-        .filter((i) => i.tipo === 'refeição')
-        .reduce((sum, i) => sum + convertCurrency(i.preco, i.moeda, targetCurrency), 0)
-    } else if (cat === 'atividades') {
-      realizedForCat += reservas
-        .filter((r) => r.tipo === 'atividade')
-        .reduce((sum, r) => sum + convertCurrency(r.preco, r.moeda, targetCurrency), 0)
-      realizedForCat += itinerarios
-        .filter((i) => i.tipo === 'atividade')
-        .reduce((sum, i) => sum + convertCurrency(i.preco, i.moeda, targetCurrency), 0)
-    } else if (cat === 'outro') {
-      realizedForCat += reservas
-        .filter((r) => r.tipo === 'outro')
-        .reduce((sum, r) => sum + convertCurrency(r.preco, r.moeda, targetCurrency), 0)
-      realizedForCat += tickets
-        .filter((t) => t.tipo === 'outro')
-        .reduce((sum, t) => sum + convertCurrency(t.preco, t.moeda, targetCurrency), 0)
-      realizedForCat += itinerarios
-        .filter((i) => i.tipo === 'outro')
-        .reduce((sum, i) => sum + convertCurrency(i.preco, i.moeda, targetCurrency), 0)
+    // Helper to match category
+    const matchCategory = (
+      itemCat: string | undefined,
+      itemTipo: string | undefined,
+      targetCat: string,
+    ) => {
+      if (itemCat) {
+        if (targetCat === 'atividades' && itemCat === 'atividade') return true
+        return itemCat === targetCat
+      }
+      if (targetCat === 'hospedagem') return itemTipo === 'hotel'
+      if (targetCat === 'transporte')
+        return itemTipo === 'voo' || itemTipo === 'trem' || itemTipo === 'onibus'
+      if (targetCat === 'alimentação') return itemTipo === 'restaurante' || itemTipo === 'refeição'
+      if (targetCat === 'atividades') return itemTipo === 'atividade'
+      if (targetCat === 'outro') return itemTipo === 'outro'
+      return false
     }
+
+    // 2. Aggregate from other collections based on category or tipo
+    realizedForCat += reservas
+      .filter((r: any) => matchCategory(r.categoria, r.tipo, cat))
+      .reduce((sum, r: any) => sum + convertCurrency(r.preco, r.moeda, targetCurrency), 0)
+
+    realizedForCat += tickets
+      .filter((t: any) => matchCategory(t.categoria, t.tipo, cat))
+      .reduce((sum, t: any) => sum + convertCurrency(t.preco, t.moeda, targetCurrency), 0)
+
+    realizedForCat += itinerarios
+      .filter((i: any) => matchCategory(i.categoria, i.tipo, cat))
+      .reduce((sum, i: any) => sum + convertCurrency(i.preco, i.moeda, targetCurrency), 0)
 
     return {
       category: cat,

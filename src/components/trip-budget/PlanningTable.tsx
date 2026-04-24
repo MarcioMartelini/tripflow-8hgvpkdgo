@@ -67,9 +67,15 @@ export function PlanningTable({ data, baseCurrency, tripId, onReload }: Props) {
   }
 
   return (
-    <Card className="overflow-hidden border-t-0 shadow-sm">
+    <Card className="overflow-hidden shadow-sm">
       <CardContent className="p-0">
         <div className="min-w-[600px]">
+          <div className="flex items-center py-3 px-6 gap-4 bg-slate-100 border-b border-slate-200 font-semibold text-slate-700 text-sm">
+            <div className="w-1/4">Título das Categorias</div>
+            <div className="w-1/4">Valor Planejado</div>
+            <div className="w-1/4">Valor Executado</div>
+            <div className="w-1/4">Percentual</div>
+          </div>
           {data.map((row, i) => (
             <div
               key={row.category}
@@ -77,8 +83,8 @@ export function PlanningTable({ data, baseCurrency, tripId, onReload }: Props) {
                 i !== data.length - 1 ? 'border-b border-slate-100' : ''
               }`}
             >
-              <div className="w-1/5 font-semibold text-slate-800 capitalize">{row.category}</div>
-              <div className="w-1/5">
+              <div className="w-1/4 font-semibold text-slate-800 capitalize">{row.category}</div>
+              <div className="w-1/4">
                 <Input
                   type="number"
                   min="0"
@@ -90,17 +96,20 @@ export function PlanningTable({ data, baseCurrency, tripId, onReload }: Props) {
                   className="w-full max-w-[140px] bg-white border-slate-200"
                 />
               </div>
-              <div className="w-1/5 text-slate-700">
+              <div className="w-1/4 text-slate-700 font-medium">
                 {formatCurrency(row.realized, baseCurrency)}
               </div>
               <div
-                className={`w-1/5 font-medium ${
-                  row.diff >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                className={`w-1/4 font-bold ${
+                  row.planned > 0
+                    ? row.percent > 100
+                      ? 'text-rose-600'
+                      : 'text-emerald-600'
+                    : 'text-slate-600'
                 }`}
               >
-                {formatCurrency(row.diff, baseCurrency)}
+                {row.planned > 0 ? `${row.percent.toFixed(1)}%` : 'N/A'}
               </div>
-              <div className="w-1/5 text-slate-600">{row.percent.toFixed(1)}%</div>
             </div>
           ))}
         </div>
