@@ -10,7 +10,6 @@ interface PdfViewerProps {
 export function PdfViewer({ url, title }: PdfViewerProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
-  const [objectUrl, setObjectUrl] = useState<string | null>(null)
   const [fileType, setFileType] = useState<'image' | 'pdf' | 'unknown'>('unknown')
 
   const isValidUrl = Boolean(url && url.trim() !== '')
@@ -22,47 +21,40 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
       return
     }
 
-    let isMounted = true
     setLoading(true)
     setError(false)
 
-    // Fetch the file as a Blob to bypass X-Frame-Options / CSP frame-ancestors
-    fetch(url)
-      .then((res) => {
-        if (!res.ok) throw new Error('Network response was not ok')
-        return res.blob()
-      })
-      .then((blob) => {
-        if (!isMounted) return
+    try {
+      const urlWithoutQuery = url.split('?')[0].toLowerCase()
+      const isImg = urlWithoutQuery.match(/\.(jpeg|jpg|gif|png|webp|svg)$/) != null
 
-        const type = blob.type.toLowerCase()
-        const isImg = type.startsWith('image/')
-        const isPdf = type === 'application/pdf'
-
-        const objUrl = URL.createObjectURL(blob)
-        setObjectUrl(objUrl)
-        setFileType(isImg ? 'image' : isPdf ? 'pdf' : 'unknown')
-        setLoading(false)
-      })
-      .catch((err) => {
-        console.error('Failed to load document:', err)
-        if (!isMounted) return
-        setError(true)
-        setLoading(false)
-      })
-
-    return () => {
-      isMounted = false
+      if (isImg) {
+        setFileType('image')
+      } else {
+        // Fallback to pdf embed, since most non-image docs uploaded here are PDFs
+        setFileType('pdf')
+      }
+    } catch (e) {
+      console.error('Error determining file type', e)
+      setFileType('pdf')
     }
   }, [url, isValidUrl])
 
+  const handleLoad = () => setLoading(false)
+  const handleError = () => {
+    setLoading(false)
+    setError(true)
+  }
+
+  // Use a short timeout to hide the loading spinner for PDFs, since embed onload isn't consistently fired across all browsers
   useEffect(() => {
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl)
-      }
+    if (fileType === 'pdf' && isValidUrl) {
+      const timer = setTimeout(() => {
+        setLoading(false)
+      }, 1500)
+      return () => clearTimeout(timer)
     }
-  }, [objectUrl])
+  }, [fileType, isValidUrl])
 
   if (!isValidUrl || error) {
     return (
@@ -92,27 +84,28 @@ export function PdfViewer({ url, title }: PdfViewerProps) {
         </div>
       )}
 
-      {objectUrl &&
-        (fileType === 'image' ? (
-          <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
-            <img
-              src={objectUrl}
-              alt={title}
-              className="max-w-full max-h-full object-contain shadow-sm"
-              onLoad={() => setLoading(false)}
-              onError={() => setError(true)}
-            />
-          </div>
-        ) : (
-          <iframe
-            src={objectUrl}
-            title={title}
-            className="w-full h-full flex-1 border-0 bg-white"
-            onLoad={() => setLoading(false)}
-            onError={() => setError(true)}
-            allow="fullscreen"
+      {fileType === 'image' ? (
+        <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
+          <img
+            src={url}
+            alt={title}
+            className="max-w-full max-h-full object-contain shadow-sm"
+            onLoad={handleLoad}
+            onError={handleError}
           />
-        ))}
+        </div>
+      ) : (
+        <embed
+          src={url}
+          type="application/pdf"
+          title={title}
+          className="w-full h-full flex-1 border-0 bg-white"
+          width="100%"
+          height="100%"
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      )}
     </div>
   )
 }
