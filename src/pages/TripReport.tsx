@@ -114,8 +114,8 @@ export default function TripReport() {
   const targetCurrency = user?.moeda_padrao || trip?.moeda || 'BRL'
 
   const budgetData = useMemo(() => {
-    return calculateBudgetData(orcamentos, despesas, targetCurrency)
-  }, [orcamentos, despesas, targetCurrency])
+    return calculateBudgetData(orcamentos, despesas, [], [], itinerary, targetCurrency)
+  }, [orcamentos, despesas, itinerary, targetCurrency])
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-'
