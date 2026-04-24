@@ -24,8 +24,17 @@ interface RouteInfo {
   distance: number // in km
   duration: number // in min
   geometry?: any
+  geometries?: any[]
   waypoints?: any[]
   legs?: { distance: number; duration: number }[]
+}
+
+const formatDuration = (mins: number) => {
+  const m = Math.round(mins)
+  if (m < 60) return `${m} min`
+  const h = Math.floor(m / 60)
+  const rem = m % 60
+  return rem > 0 ? `${h}h ${rem}min` : `${h}h`
 }
 
 const getIconSvg = (tipo?: string) => {
@@ -73,13 +82,7 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
     return waypoints.map((wp) => validEvents[wp.original_index]).filter(Boolean)
   }, [validEvents, showOptimized, optimizedRouteInfo])
 
-  const [transportMode, setTransportMode] = useState<string>('carro')
-
-  useEffect(() => {
-    if (validEvents.length > 0 && validEvents[0].meio_transporte) {
-      setTransportMode(validEvents[0].meio_transporte)
-    }
-  }, [validEvents])
+  const [transportMode, setTransportMode] = useState<string>('')
 
   const handleTransportModeChange = async (value: string) => {
     setTransportMode(value)
@@ -91,17 +94,18 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
           }
         }),
       )
-      toast({ title: 'Meio de transporte atualizado!' })
+      toast({ title: 'Meio de transporte de todas as atividades atualizado!' })
     } catch (e) {
       toast({ title: 'Erro ao atualizar meio de transporte', variant: 'destructive' })
     }
   }
 
   const osrmProfile = useMemo(() => {
-    if (transportMode === 'andando' || transportMode === 'transporte_publico') return 'foot'
-    if (transportMode === 'bicicleta') return 'bike'
+    const defaultMode = validEvents.length > 0 ? validEvents[0].meio_transporte || 'carro' : 'carro'
+    if (defaultMode === 'andando' || defaultMode === 'transporte_publico') return 'foot'
+    if (defaultMode === 'bicicleta') return 'bike'
     return 'driving'
-  }, [transportMode])
+  }, [validEvents])
 
   useEffect(() => {
     if ((window as any).L) {
@@ -129,28 +133,51 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
     }
     const fetchRoute = async () => {
       try {
-        const coordinates = validEvents.map((e) => `${e.longitude},${e.latitude}`).join(';')
-        const res = await fetch(
-          `https://router.project-osrm.org/route/v1/${osrmProfile}/${coordinates}?overview=full&geometries=geojson`,
+        let totalDistance = 0
+        let totalDuration = 0
+        const legs: any[] = []
+        const geometries: any[] = []
+
+        await Promise.all(
+          validEvents.slice(0, -1).map(async (ev, i) => {
+            const next = validEvents[i + 1]
+            const mode = ev.meio_transporte || 'carro'
+            let profile = 'driving'
+            if (mode === 'andando' || mode === 'transporte_publico') profile = 'foot'
+            if (mode === 'bicicleta') profile = 'bike'
+
+            const res = await fetch(
+              `https://router.project-osrm.org/route/v1/${profile}/${ev.longitude},${ev.latitude};${next.longitude},${next.latitude}?overview=full&geometries=geojson`,
+            )
+            const data = await res.json()
+            if (data.code === 'Ok' && data.routes.length > 0) {
+              const route = data.routes[0]
+              totalDistance += route.distance / 1000
+              totalDuration += route.duration / 60
+              legs[i] = {
+                distance: route.distance / 1000,
+                duration: route.duration / 60,
+              }
+              geometries[i] = route.geometry
+            } else {
+              legs[i] = null
+              geometries[i] = null
+            }
+          }),
         )
-        const data = await res.json()
-        if (data.code === 'Ok' && data.routes.length > 0) {
-          setRouteInfo({
-            distance: data.routes[0].distance / 1000,
-            duration: data.routes[0].duration / 60,
-            geometry: data.routes[0].geometry,
-            legs: data.routes[0].legs.map((leg: any) => ({
-              distance: leg.distance / 1000,
-              duration: leg.duration / 60,
-            })),
-          })
-        }
+
+        setRouteInfo({
+          distance: totalDistance,
+          duration: totalDuration,
+          geometries: geometries.filter(Boolean),
+          legs: legs.filter(Boolean),
+        })
       } catch (err) {
         console.error('Error fetching route', err)
       }
     }
     fetchRoute()
-  }, [validEvents, osrmProfile])
+  }, [validEvents])
 
   const handleApplyOptimization = async () => {
     if (!optimizedRouteInfo?.waypoints) return
@@ -296,16 +323,32 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
 
     // Draw route
     const currentRouteInfo = showOptimized ? optimizedRouteInfo : routeInfo
-    if (currentRouteInfo?.geometry) {
-      const geojsonLayer = L.geoJSON(currentRouteInfo.geometry, {
-        style: {
-          color: showOptimized ? '#10b981' : '#3b82f6',
-          weight: 4,
-          opacity: 0.7,
-          dashArray: showOptimized ? '10, 10' : '',
-        },
-      }).addTo(map)
-      bounds.extend(geojsonLayer.getBounds())
+    if (currentRouteInfo) {
+      if (currentRouteInfo.geometry) {
+        const geojsonLayer = L.geoJSON(currentRouteInfo.geometry, {
+          style: {
+            color: showOptimized ? '#10b981' : '#3b82f6',
+            weight: 4,
+            opacity: 0.7,
+            dashArray: showOptimized ? '10, 10' : '',
+          },
+        }).addTo(map)
+        bounds.extend(geojsonLayer.getBounds())
+      }
+      if (currentRouteInfo.geometries) {
+        currentRouteInfo.geometries.forEach((geom) => {
+          if (geom) {
+            const geojsonLayer = L.geoJSON(geom, {
+              style: {
+                color: '#3b82f6',
+                weight: 4,
+                opacity: 0.7,
+              },
+            }).addTo(map)
+            bounds.extend(geojsonLayer.getBounds())
+          }
+        })
+      }
     }
 
     if (orderedEvents.length > 0) {
@@ -342,11 +385,11 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <label className="text-xs font-medium text-slate-500 uppercase">
-                Meio de Transporte
+                Mudar Meio de Transporte de Tudo
               </label>
               <Select value={transportMode} onValueChange={handleTransportModeChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o transporte" />
+                  <SelectValue placeholder="Aplicar em todos" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="carro">
@@ -373,7 +416,8 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
               </Select>
               {transportMode === 'transporte_publico' && (
                 <p className="text-[10px] text-amber-600 font-medium">
-                  *Tempo estimado a pé. O app externo calculará a rota correta.
+                  *Tempo do transporte público usa base a pé para cálculo interno. O app de
+                  navegação calculará corretamente.
                 </p>
               )}
             </div>
@@ -393,7 +437,7 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
                       Tempo Estimado
                     </span>
                     <span className="font-bold text-lg">
-                      {Math.round(activeRoute.duration)} min
+                      {formatDuration(activeRoute.duration)}
                     </span>
                   </div>
                 </div>
@@ -484,9 +528,49 @@ export function MapView({ events, trip, onEditEvent }: MapViewProps) {
                       {ev.hora_inicio || 'Sem horário'} • {ev.local || 'Local não definido'}
                     </p>
                     {leg && i < orderedEvents.length - 1 && (
-                      <div className="mt-3 flex items-center gap-1 text-[10px] font-medium text-slate-400 bg-slate-50 w-fit px-2 py-0.5 rounded border">
-                        <Navigation className="w-3 h-3 text-slate-400" />
-                        {leg.distance.toFixed(1)} km • {Math.round(leg.duration)} min
+                      <div className="mt-3 flex flex-col gap-2">
+                        {!showOptimized && (
+                          <Select
+                            value={ev.meio_transporte || 'carro'}
+                            onValueChange={async (val) => {
+                              try {
+                                await updateItinerario(ev.id, { meio_transporte: val })
+                              } catch {
+                                /* intentionally ignored */
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-6 w-[130px] text-[10px] bg-slate-50 border-slate-200">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="carro">
+                                <div className="flex items-center gap-2">
+                                  <Car className="h-3 w-3" /> Carro
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="andando">
+                                <div className="flex items-center gap-2">
+                                  <Footprints className="h-3 w-3" /> A Pé
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="transporte_publico">
+                                <div className="flex items-center gap-2">
+                                  <Train className="h-3 w-3" /> Público
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="bicicleta">
+                                <div className="flex items-center gap-2">
+                                  <Bike className="h-3 w-3" /> Bike
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <div className="flex items-center gap-1 text-[10px] font-medium text-slate-400 bg-slate-50 w-fit px-2 py-0.5 rounded border">
+                          <Navigation className="w-3 h-3 text-slate-400" />
+                          {leg.distance.toFixed(1)} km • {formatDuration(leg.duration)}
+                        </div>
                       </div>
                     )}
                   </div>

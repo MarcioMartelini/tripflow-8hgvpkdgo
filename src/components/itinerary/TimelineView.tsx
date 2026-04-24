@@ -18,10 +18,29 @@ import {
   CalendarCheck,
   Navigation,
   Route,
+  Car,
+  Footprints,
+  Train,
+  Bike,
 } from 'lucide-react'
 import pb from '@/lib/pocketbase/client'
 import { cn } from '@/lib/utils'
 import { ActivityComments } from './ActivityComments'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const formatDuration = (mins: number) => {
+  const m = Math.round(mins)
+  if (m < 60) return `${m} min`
+  const h = Math.floor(m / 60)
+  const rem = m % 60
+  return rem > 0 ? `${h}h ${rem}min` : `${h}h`
+}
 
 interface TimelineViewProps {
   events: ItinerarioEvent[]
@@ -69,34 +88,35 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
   useEffect(() => {
     const fetchRoute = async () => {
       const valid = events.filter((e) => e.latitude && e.longitude)
-      const coords = valid.map((e) => `${e.longitude},${e.latitude}`).join(';')
-      if (!coords || coords.split(';').length < 2) return
+      if (valid.length < 2) return
 
-      const mode = valid[0]?.meio_transporte || 'carro'
-      let profile = 'driving'
-      if (mode === 'andando' || mode === 'transporte_publico') profile = 'foot'
-      if (mode === 'bicicleta') profile = 'bike'
+      const newLegs: Record<string, { distance: number; duration: number }> = {}
 
-      try {
-        const res = await fetch(
-          `https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=false`,
-        )
-        const data = await res.json()
-        if (data.code === 'Ok' && data.routes?.[0]?.legs) {
-          const newLegs: Record<string, { distance: number; duration: number }> = {}
-          data.routes[0].legs.forEach((leg: any, i: number) => {
-            if (valid[i] && valid[i + 1]) {
-              newLegs[`${valid[i].id}-${valid[i + 1].id}`] = {
-                distance: leg.distance / 1000,
-                duration: leg.duration / 60,
+      await Promise.all(
+        valid.slice(0, -1).map(async (ev, i) => {
+          const next = valid[i + 1]
+          const mode = ev.meio_transporte || 'carro'
+          let profile = 'driving'
+          if (mode === 'andando' || mode === 'transporte_publico') profile = 'foot'
+          if (mode === 'bicicleta') profile = 'bike'
+
+          try {
+            const res = await fetch(
+              `https://router.project-osrm.org/route/v1/${profile}/${ev.longitude},${ev.latitude};${next.longitude},${next.latitude}?overview=false`,
+            )
+            const data = await res.json()
+            if (data.code === 'Ok' && data.routes?.[0]) {
+              newLegs[`${ev.id}-${next.id}`] = {
+                distance: data.routes[0].distance / 1000,
+                duration: data.routes[0].duration / 60,
               }
             }
-          })
-          setLegs(newLegs)
-        }
-      } catch (e) {
-        console.error('Error fetching distances', e)
-      }
+          } catch (e) {
+            console.error('Error fetching distance for leg', e)
+          }
+        }),
+      )
+      setLegs(newLegs)
     }
     fetchRoute()
   }, [events])
@@ -169,6 +189,10 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
     }
   }
 
+  const validEvents = events.filter((e) => e.latitude && e.longitude)
+  const totalDistance = Object.values(legs).reduce((acc, leg) => acc + leg.distance, 0)
+  const totalDuration = Object.values(legs).reduce((acc, leg) => acc + leg.duration, 0)
+
   if (events.length === 0) {
     return (
       <div className="text-center py-16 bg-white border border-dashed rounded-lg shadow-sm">
@@ -185,27 +209,45 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
     )
   }
 
-  const validCount = events.filter((e) => e.latitude && e.longitude).length
+  const validCount = validEvents.length
 
   return (
     <div className="animate-fade-in">
-      {validCount >= 3 && !suggestion && (
+      {validCount >= 2 && (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-50 p-4 rounded-lg mb-6 border gap-4">
-          <div>
-            <h4 className="font-semibold text-slate-800">Otimização de Rota</h4>
-            <p className="text-sm text-slate-500">
-              Reordene as atividades geograficamente para economizar tempo e distância.
-            </p>
+          <div className="flex flex-col gap-1">
+            <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+              <Navigation className="w-4 h-4 text-indigo-500" />
+              Resumo da Rota do Dia
+            </h4>
+            <div className="flex items-center gap-4 text-sm text-slate-600 mt-1">
+              <span>
+                Distância Total:{' '}
+                <strong className="text-slate-900">{totalDistance.toFixed(1)} km</strong>
+              </span>
+              <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+              <span>
+                Tempo Estimado:{' '}
+                <strong className="text-slate-900">{formatDuration(totalDuration)}</strong>
+              </span>
+            </div>
+            {validCount >= 3 && !suggestion && (
+              <p className="text-xs text-slate-500 mt-2">
+                Reordene as atividades geograficamente para economizar tempo e distância.
+              </p>
+            )}
           </div>
-          <Button
-            onClick={handleOptimize}
-            disabled={isOptimizing}
-            variant="outline"
-            className="shrink-0 bg-white"
-          >
-            <Route className="w-4 h-4 mr-2" />
-            {isOptimizing ? 'Calculando...' : 'Otimizar Rota'}
-          </Button>
+          {validCount >= 3 && !suggestion && (
+            <Button
+              onClick={handleOptimize}
+              disabled={isOptimizing}
+              variant="outline"
+              className="shrink-0 bg-white"
+            >
+              <Route className="w-4 h-4 mr-2 text-indigo-500" />
+              {isOptimizing ? 'Calculando...' : 'Otimizar Rota'}
+            </Button>
+          )}
         </div>
       )}
 
@@ -356,11 +398,51 @@ export function TimelineView({ events, onEdit, onDelete, onAdd }: TimelineViewPr
               </Card>
 
               {leg && (
-                <div className="ml-6 py-1 flex items-center gap-2 text-xs font-medium text-slate-400">
-                  <Navigation className="w-3 h-3" />
-                  <span>{leg.distance.toFixed(1)} km</span>
-                  <span className="opacity-50">•</span>
-                  <span>{Math.round(leg.duration)} min</span>
+                <div className="ml-6 py-2 flex flex-wrap items-center gap-3 text-xs font-medium text-slate-500">
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={event.meio_transporte || 'carro'}
+                      onValueChange={async (val) => {
+                        try {
+                          await updateItinerario(event.id, { meio_transporte: val })
+                        } catch {
+                          /* intentionally ignored */
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-7 w-[140px] text-xs bg-slate-50 border-slate-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="carro">
+                          <div className="flex items-center gap-2">
+                            <Car className="h-3 w-3" /> Carro
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="andando">
+                          <div className="flex items-center gap-2">
+                            <Footprints className="h-3 w-3" /> A Pé
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="transporte_publico">
+                          <div className="flex items-center gap-2">
+                            <Train className="h-3 w-3" /> Público
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="bicicleta">
+                          <div className="flex items-center gap-2">
+                            <Bike className="h-3 w-3" /> Bicicleta
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1.5 rounded border border-slate-100">
+                    <Navigation className="w-3 h-3 text-slate-400" />
+                    <span>{leg.distance.toFixed(1)} km</span>
+                    <span className="opacity-50">•</span>
+                    <span>{formatDuration(leg.duration)}</span>
+                  </div>
                 </div>
               )}
             </div>
