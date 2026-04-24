@@ -54,10 +54,11 @@ export const calculateBudgetData = (
   targetCurrency: string = 'BRL',
 ): CategoryData[] => {
   return CATEGORIAS.map((cat) => {
-    const orcamento = orcamentos.find((o) => o.categoria === cat)
-    const plannedForCat = orcamento
-      ? convertCurrency(orcamento.valor_planejado, orcamento.moeda || 'BRL', targetCurrency)
-      : 0
+    const orcamentosForCat = orcamentos.filter((o) => o.categoria === cat)
+    const plannedForCat = orcamentosForCat.reduce(
+      (sum, o) => sum + convertCurrency(o.valor_planejado, o.moeda || 'BRL', targetCurrency),
+      0,
+    )
 
     let realizedForCat = 0
 
@@ -104,8 +105,8 @@ export const calculateBudgetData = (
       realized: realizedForCat,
       diff: plannedForCat - realizedForCat,
       percent: plannedForCat > 0 ? (realizedForCat / plannedForCat) * 100 : 0,
-      originalPlannedValue: orcamento ? orcamento.valor_planejado : 0,
-      orcamentoId: orcamento?.id,
+      originalPlannedValue: orcamentosForCat.reduce((sum, o) => sum + o.valor_planejado, 0),
+      orcamentoId: orcamentosForCat.length > 0 ? orcamentosForCat[0].id : undefined,
     }
   })
 }

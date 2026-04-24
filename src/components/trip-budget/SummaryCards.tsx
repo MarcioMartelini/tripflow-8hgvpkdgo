@@ -3,7 +3,6 @@ import { formatCurrency } from '@/lib/currency'
 import { CategoryData } from '@/lib/budget-utils'
 import { AlertTriangle } from 'lucide-react'
 import { Trip } from '@/services/trips'
-import { differenceInDays, parseISO, isAfter } from 'date-fns'
 
 interface Props {
   data: CategoryData[]
@@ -15,26 +14,6 @@ export function SummaryCards({ data, baseCurrency, trip }: Props) {
   const totalPlanned = data.reduce((acc, curr) => acc + curr.planned, 0)
   const totalRealized = data.reduce((acc, curr) => acc + curr.realized, 0)
   const diff = totalPlanned - totalRealized
-
-  const start = parseISO(trip.start_date)
-  const end = parseISO(trip.end_date)
-  const today = new Date()
-
-  const tripDuration = Math.max(1, differenceInDays(end, start) + 1)
-
-  let daysElapsed = 1
-  let remainingDays = tripDuration
-
-  if (isAfter(today, end)) {
-    daysElapsed = tripDuration
-    remainingDays = 0
-  } else if (isAfter(today, start)) {
-    daysElapsed = differenceInDays(today, start) + 1
-    remainingDays = tripDuration - daysElapsed
-  }
-
-  const averageDailyExpense = totalRealized / daysElapsed
-  const forecast = totalRealized + averageDailyExpense * remainingDays
 
   const percentRealized = totalPlanned > 0 ? (totalRealized / totalPlanned) * 100 : 0
 
@@ -90,14 +69,10 @@ export function SummaryCards({ data, baseCurrency, trip }: Props) {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            <div
-              className={`text-2xl font-bold ${forecast > totalPlanned ? 'text-orange-500' : 'text-slate-900'}`}
-            >
-              {formatCurrency(forecast, baseCurrency)}
+            <div className="text-2xl font-bold text-orange-500">
+              {formatCurrency(totalPlanned, baseCurrency)}
             </div>
-            {forecast > totalPlanned && (
-              <AlertTriangle className="h-5 w-5 text-orange-500 animate-pulse" />
-            )}
+            <AlertTriangle className="h-5 w-5 text-orange-500" />
           </div>
         </CardContent>
       </Card>
