@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, Navigate } from 'react-router-dom'
-import { User, LogOut, Bell } from 'lucide-react'
+import { User, LogOut, Bell, Wifi, WifiOff, RefreshCw, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
 import { cn } from '@/lib/utils'
@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { NewTripDialog } from './NewTripDialog'
 import { SelectTripDialog } from './SelectTripDialog'
 import pb from '@/lib/pocketbase/client'
+import { useSync } from '@/hooks/use-sync'
 import { useToast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
 import logoUrl from '@/assets/design-sem-nome-314e3.png'
@@ -25,6 +26,7 @@ export default function Layout() {
   const { toast } = useToast()
   const [unreadAlerts, setUnreadAlerts] = useState(0)
   const [isSelectTripOpen, setIsSelectTripOpen] = useState(false)
+  const { syncState, pendingCount } = useSync()
 
   useEffect(() => {
     if (user) {
@@ -136,7 +138,41 @@ export default function Layout() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
+            <div className="flex items-center gap-1.5 mr-1 bg-slate-100 px-2.5 py-1.5 rounded-full">
+              {syncState === 'offline' && (
+                <>
+                  <WifiOff className="w-3.5 h-3.5 text-red-500" />{' '}
+                  <span className="hidden md:inline text-xs font-medium text-red-600">
+                    Offline {pendingCount > 0 && `(${pendingCount})`}
+                  </span>
+                </>
+              )}
+              {syncState === 'syncing' && (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 text-yellow-600 animate-spin" />{' '}
+                  <span className="hidden md:inline text-xs font-medium text-yellow-700">
+                    Sincronizando...
+                  </span>
+                </>
+              )}
+              {syncState === 'synced' && (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />{' '}
+                  <span className="hidden md:inline text-xs font-medium text-green-600">
+                    Sincronizado
+                  </span>
+                </>
+              )}
+              {syncState === 'online' && pendingCount === 0 && (
+                <>
+                  <Wifi className="w-3.5 h-3.5 text-green-500" />{' '}
+                  <span className="hidden md:inline text-xs font-medium text-green-600">
+                    Online
+                  </span>
+                </>
+              )}
+            </div>
             <Link
               to="/alerts"
               className="relative p-2 text-slate-500 hover:text-primary transition-colors md:hidden"
