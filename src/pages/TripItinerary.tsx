@@ -234,12 +234,7 @@ export default function TripItinerary() {
 
       <div className="flex flex-col lg:flex-row gap-8 flex-1">
         {/* Sidebar Desktop Calendar */}
-        <div
-          className={cn(
-            'hidden lg:block w-[280px] shrink-0 print-hidden',
-            viewMode === 'map' && 'hidden lg:hidden',
-          )}
-        >
+        <div className={cn('hidden lg:block w-[280px] shrink-0 print-hidden')}>
           <div className="bg-white p-3 rounded-lg border shadow-sm sticky top-6">
             <Calendar
               mode="single"
@@ -254,7 +249,7 @@ export default function TripItinerary() {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col gap-6">
           {/* Mobile/Tablet Date Selector */}
-          <div className={cn('lg:hidden print-hidden', viewMode === 'map' && 'hidden')}>
+          <div className={cn('lg:hidden print-hidden')}>
             <ScrollArea className="w-full whitespace-nowrap bg-white border rounded-lg shadow-sm">
               <div className="flex w-max space-x-1 p-2">
                 {allTripDays.map((day) => (
@@ -279,22 +274,16 @@ export default function TripItinerary() {
           <div
             className={cn(
               'flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm',
-              viewMode === 'map' && 'mb-0',
             )}
           >
             <div>
-              {viewMode === 'map' ? (
-                <h2 className="text-xl font-bold text-slate-800">Visualização no Mapa</h2>
-              ) : (
-                <>
-                  <h2 className="text-xl font-bold text-slate-800 capitalize">
-                    {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
-                  </h2>
-                  {viewMode === 'weekly' && (
-                    <p className="text-sm text-slate-500">Exibindo próximos 7 dias</p>
-                  )}
-                </>
+              <h2 className="text-xl font-bold text-slate-800 capitalize">
+                {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+              </h2>
+              {viewMode === 'weekly' && (
+                <p className="text-sm text-slate-500">Exibindo próximos 7 dias</p>
               )}
+              {viewMode === 'map' && <p className="text-sm text-slate-500">Visualização no Mapa</p>}
             </div>
             <Button className="print-hidden" onClick={() => setIsAddModalOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -324,7 +313,7 @@ export default function TripItinerary() {
               />
             )}
             {viewMode === 'map' && (
-              <MapView events={events} trip={trip} onEditEvent={setEventToEdit} />
+              <MapView events={dailyEvents} trip={trip} onEditEvent={setEventToEdit} />
             )}
           </div>
 
