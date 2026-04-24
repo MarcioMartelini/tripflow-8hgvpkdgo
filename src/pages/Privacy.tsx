@@ -187,11 +187,9 @@ export default function Privacy() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Download className="h-5 w-5 text-blue-600" />
-              Portabilidade de Dados
+              Exportar Meus Dados
             </CardTitle>
-            <CardDescription>
-              Exporte todos os seus dados em formato JSON legível por máquina.
-            </CardDescription>
+            <CardDescription>Baixe todos os seus dados em formato JSON</CardDescription>
           </CardHeader>
           <CardContent>
             <Button
@@ -233,7 +231,7 @@ export default function Privacy() {
               </div>
             ) : errorData ? (
               <div className="text-destructive flex items-center gap-2">
-                Erro ao carregar dados.{' '}
+                Erro ao carregar{' '}
                 <Button variant="link" onClick={fetchData} className="p-0 h-auto">
                   Tentar novamente
                 </Button>
@@ -317,13 +315,13 @@ export default function Privacy() {
               </div>
             ) : errorData ? (
               <div className="text-destructive flex items-center gap-2">
-                Erro ao carregar dados.{' '}
+                Erro ao carregar{' '}
                 <Button variant="link" onClick={fetchData} className="p-0 h-auto">
                   Tentar novamente
                 </Button>
               </div>
             ) : filteredLogs.length === 0 ? (
-              <p className="text-muted-foreground">Nenhum registro encontrado.</p>
+              <p className="text-muted-foreground">Nenhuma atividade registrada</p>
             ) : (
               <div className="rounded-md border">
                 <Table>
@@ -356,10 +354,10 @@ export default function Privacy() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
               <Trash2 className="h-5 w-5" />
-              Direito ao Esquecimento (Deletar Meus Dados)
+              Deletar Meus Dados
             </CardTitle>
             <CardDescription className="text-slate-700">
-              Exclua permanentemente sua conta e todos os dados associados.
+              Ao clicar abaixo, TODOS os seus dados serão deletados permanentemente
             </CardDescription>
           </CardHeader>
           <CardContent>
