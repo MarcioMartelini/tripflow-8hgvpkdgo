@@ -30,6 +30,12 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import {
   Settings,
   LayoutTemplate,
   Database,
@@ -52,43 +58,12 @@ import { getTrips } from '@/services/trips'
 import { useToast } from '@/hooks/use-toast'
 import TripReport from '@/pages/TripReport'
 
-const defaultPresets = {
-  compact: {
-    name: 'Compacto',
-    margins: { top: 5, bottom: 5, left: 5, right: 5 },
-    showChart: false,
-    showAlert: false,
-    showDescription: false,
-    fontSize: 'text-xs',
-    pageBreak: false,
-  },
-  executive: {
-    name: 'Executivo',
-    margins: { top: 20, bottom: 20, left: 20, right: 20 },
-    showChart: true,
-    showAlert: true,
-    showDescription: false,
-    fontSize: 'text-base',
-    pageBreak: true,
-  },
-  detailed: {
-    name: 'Detalhado',
-    margins: { top: 15, bottom: 15, left: 15, right: 15 },
-    showChart: true,
-    showAlert: true,
-    showDescription: true,
-    fontSize: 'text-sm',
-    pageBreak: false,
-  },
-}
-
 export default function DeveloperArea() {
   const { toast } = useToast()
   const [configs, setConfigs] = useState<Configuracao[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({ tripsCount: 0, itinerarioCount: 0, usersCount: 0 })
 
-  // Form States for System Settings
   const [sysName, setSysName] = useState('')
   const [sysEmail, setSysEmail] = useState('')
   const [sysJson, setSysJson] = useState('')
@@ -96,9 +71,50 @@ export default function DeveloperArea() {
 
   const [previewTripId, setPreviewTripId] = useState<string | undefined>()
 
-  const [activePreset, setActivePreset] = useState('detailed')
-  const [presetsJson, setPresetsJson] = useState(JSON.stringify(defaultPresets, null, 2))
+  const [activePreset, setActivePreset] = useState('preset_detalhado')
+  const [presetCompacto, setPresetCompacto] = useState('')
+  const [presetExecutivo, setPresetExecutivo] = useState('')
+  const [presetDetalhado, setPresetDetalhado] = useState('')
   const [isSavingPresets, setIsSavingPresets] = useState(false)
+
+  const defaultPresets = {
+    compacto: {
+      margin_top: 10,
+      margin_bottom: 10,
+      margin_left: 10,
+      margin_right: 10,
+      font_size: 'text-xs',
+      show_charts: false,
+      show_notes: false,
+      show_alerts: false,
+      page_break: false,
+      name: 'Compacto',
+    },
+    executivo: {
+      margin_top: 25,
+      margin_bottom: 25,
+      margin_left: 25,
+      margin_right: 25,
+      font_size: 'text-base',
+      show_charts: true,
+      show_notes: false,
+      show_alerts: true,
+      page_break: true,
+      name: 'Executivo',
+    },
+    detalhado: {
+      margin_top: 20,
+      margin_bottom: 20,
+      margin_left: 20,
+      margin_right: 20,
+      font_size: 'text-sm',
+      show_charts: true,
+      show_notes: true,
+      show_alerts: true,
+      page_break: false,
+      name: 'Detalhado',
+    },
+  }
 
   const loadData = async () => {
     try {
@@ -114,27 +130,30 @@ export default function DeveloperArea() {
         setPreviewTripId(tripsData[0].id)
       }
 
-      // Initialize form states
       const nameConf = confData.find((c) => c.chave === 'app_nome')
       const emailConf = confData.find((c) => c.chave === 'email_suporte')
       const jsonConf = confData.find((c) => c.chave === 'raw_json_config')
-
       if (nameConf) setSysName(nameConf.valor)
       if (emailConf) setSysEmail(emailConf.valor)
       if (jsonConf) setSysJson(jsonConf.valor)
 
-      const activePresetConf = confData.find((c) => c.chave === 'active_report_preset')
-      if (activePresetConf) setActivePreset(activePresetConf.valor)
+      const activeConf = confData.find((c) => c.chave === 'active_report_preset')
+      if (activeConf) setActivePreset(activeConf.valor)
 
-      const definitionsConf = confData.find((c) => c.chave === 'report_presets_definitions')
-      if (definitionsConf) {
-        try {
-          // just to ensure format is valid json before setting
-          setPresetsJson(JSON.stringify(JSON.parse(definitionsConf.valor), null, 2))
-        } catch {
-          /* intentionally ignored */
-        }
-      }
+      const compConf = confData.find((c) => c.chave === 'preset_compacto')
+      setPresetCompacto(
+        compConf ? compConf.valor : JSON.stringify(defaultPresets.compacto, null, 2),
+      )
+
+      const execConf = confData.find((c) => c.chave === 'preset_executivo')
+      setPresetExecutivo(
+        execConf ? execConf.valor : JSON.stringify(defaultPresets.executivo, null, 2),
+      )
+
+      const detConf = confData.find((c) => c.chave === 'preset_detalhado')
+      setPresetDetalhado(
+        detConf ? detConf.valor : JSON.stringify(defaultPresets.detalhado, null, 2),
+      )
     } catch (error) {
       console.error(error)
       toast({ title: 'Erro ao carregar dados', variant: 'destructive' })
@@ -153,58 +172,44 @@ export default function DeveloperArea() {
 
   const handleUpdateConfigString = async (chave: string, valor: string) => {
     const conf = configs.find((c) => c.chave === chave)
-
-    // Optimistic update
     setConfigs((prev) => {
-      if (conf) {
-        return prev.map((c) => (c.chave === chave ? { ...c, valor } : c))
-      }
+      if (conf) return prev.map((c) => (c.chave === chave ? { ...c, valor } : c))
       return [...prev, { id: 'temp', chave, valor, descricao: '', created: '', updated: '' }]
     })
-
     try {
       if (conf) {
         await updateConfiguracao(conf.id, valor)
       } else {
         await createConfiguracao(chave, valor)
-        loadData() // Reload to get proper ID
+        loadData()
       }
       toast({ title: 'Configuração atualizada' })
     } catch (error) {
       toast({ title: 'Erro ao atualizar', variant: 'destructive' })
-      loadData() // Revert on error
+      loadData()
     }
   }
 
   const handleSavePresets = async () => {
     setIsSavingPresets(true)
     try {
-      JSON.parse(presetsJson) // validate JSON
+      JSON.parse(presetCompacto)
+      JSON.parse(presetExecutivo)
+      JSON.parse(presetDetalhado)
 
-      const promises = []
-      const activeConf = configs.find((c) => c.chave === 'active_report_preset')
-      if (activeConf) {
-        promises.push(updateConfiguracao(activeConf.id, activePreset))
-      } else {
-        promises.push(
-          createConfiguracao('active_report_preset', activePreset, 'Preset ativo do relatorio'),
-        )
+      const saveConf = async (chave: string, valor: string, desc: string) => {
+        const conf = configs.find((c) => c.chave === chave)
+        if (conf) return updateConfiguracao(conf.id, valor)
+        return createConfiguracao(chave, valor, desc)
       }
 
-      const defConf = configs.find((c) => c.chave === 'report_presets_definitions')
-      if (defConf) {
-        promises.push(updateConfiguracao(defConf.id, presetsJson))
-      } else {
-        promises.push(
-          createConfiguracao(
-            'report_presets_definitions',
-            presetsJson,
-            'Definições JSON dos presets',
-          ),
-        )
-      }
+      await Promise.all([
+        saveConf('active_report_preset', activePreset, 'Preset ativo do relatorio'),
+        saveConf('preset_compacto', presetCompacto, 'Configuração do preset Compacto'),
+        saveConf('preset_executivo', presetExecutivo, 'Configuração do preset Executivo'),
+        saveConf('preset_detalhado', presetDetalhado, 'Configuração do preset Detalhado'),
+      ])
 
-      await Promise.all(promises)
       toast({ title: 'Presets salvos com sucesso!' })
       loadData()
     } catch (error) {
@@ -309,33 +314,60 @@ export default function DeveloperArea() {
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.keys(
-                        (() => {
-                          try {
-                            return JSON.parse(presetsJson)
-                          } catch {
-                            return defaultPresets
-                          }
-                        })(),
-                      ).map((k) => (
-                        <SelectItem key={k} value={k}>
-                          {k}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="preset_compacto">Compacto</SelectItem>
+                      <SelectItem value="preset_executivo">Executivo</SelectItem>
+                      <SelectItem value="preset_detalhado">Detalhado</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-slate-500 font-semibold">
-                    Configuração JSON (report_presets_definitions)
-                  </Label>
-                  <Textarea
-                    className="font-mono text-xs h-64"
-                    value={presetsJson}
-                    onChange={(e) => setPresetsJson(e.target.value)}
-                  />
+
+                <div className="space-y-2 pt-2">
+                  <Label className="text-xs text-slate-500 font-semibold">Definições JSON</Label>
+                  <Accordion type="single" collapsible className="w-full space-y-2">
+                    <AccordionItem value="compacto" className="bg-slate-50 border rounded-lg px-4">
+                      <AccordionTrigger className="text-sm hover:no-underline">
+                        Preset Compacto
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <Textarea
+                          className="font-mono text-xs h-48 bg-white"
+                          value={presetCompacto}
+                          onChange={(e) => setPresetCompacto(e.target.value)}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="executivo" className="bg-slate-50 border rounded-lg px-4">
+                      <AccordionTrigger className="text-sm hover:no-underline">
+                        Preset Executivo
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <Textarea
+                          className="font-mono text-xs h-48 bg-white"
+                          value={presetExecutivo}
+                          onChange={(e) => setPresetExecutivo(e.target.value)}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="detalhado" className="bg-slate-50 border rounded-lg px-4">
+                      <AccordionTrigger className="text-sm hover:no-underline">
+                        Preset Detalhado
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <Textarea
+                          className="font-mono text-xs h-48 bg-white"
+                          value={presetDetalhado}
+                          onChange={(e) => setPresetDetalhado(e.target.value)}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </div>
-                <Button onClick={handleSavePresets} disabled={isSavingPresets}>
+
+                <Button
+                  onClick={handleSavePresets}
+                  disabled={isSavingPresets}
+                  className="w-full sm:w-auto"
+                >
                   <Save className="h-4 w-4 mr-2" />
                   {isSavingPresets ? 'Salvando...' : 'Salvar Presets'}
                 </Button>
@@ -383,7 +415,9 @@ export default function DeveloperArea() {
                               {} as Record<string, string>,
                             ),
                             active_report_preset: activePreset,
-                            report_presets_definitions: presetsJson,
+                            preset_compacto: presetCompacto,
+                            preset_executivo: presetExecutivo,
+                            preset_detalhado: presetDetalhado,
                           }}
                         />
                       </div>
