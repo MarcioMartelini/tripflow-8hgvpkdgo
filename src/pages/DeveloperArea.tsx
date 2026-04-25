@@ -34,7 +34,7 @@ import {
   LayoutTemplate,
   Database,
   Save,
-  AlertCircle,
+  AlertTriangle,
   ShieldAlert,
   WifiOff,
   FileText,
@@ -44,12 +44,43 @@ import {
 import {
   getConfiguracoes,
   updateConfiguracao,
+  createConfiguracao,
   getDatabaseStats,
   Configuracao,
 } from '@/services/configuracoes'
 import { getTrips } from '@/services/trips'
 import { useToast } from '@/hooks/use-toast'
 import TripReport from '@/pages/TripReport'
+
+const defaultPresets = {
+  compact: {
+    name: 'Compacto',
+    margins: { top: 5, bottom: 5, left: 5, right: 5 },
+    showChart: false,
+    showAlert: false,
+    showDescription: false,
+    fontSize: 'text-xs',
+    pageBreak: false,
+  },
+  executive: {
+    name: 'Executivo',
+    margins: { top: 20, bottom: 20, left: 20, right: 20 },
+    showChart: true,
+    showAlert: true,
+    showDescription: false,
+    fontSize: 'text-base',
+    pageBreak: true,
+  },
+  detailed: {
+    name: 'Detalhado',
+    margins: { top: 15, bottom: 15, left: 15, right: 15 },
+    showChart: true,
+    showAlert: true,
+    showDescription: true,
+    fontSize: 'text-sm',
+    pageBreak: false,
+  },
+}
 
 export default function DeveloperArea() {
   const { toast } = useToast()
@@ -64,7 +95,10 @@ export default function DeveloperArea() {
   const [isSaving, setIsSaving] = useState(false)
 
   const [previewTripId, setPreviewTripId] = useState<string | undefined>()
-  const [margins, setMargins] = useState({ top: 20, bottom: 20, left: 15, right: 15 })
+
+  const [activePreset, setActivePreset] = useState('detailed')
+  const [presetsJson, setPresetsJson] = useState(JSON.stringify(defaultPresets, null, 2))
+  const [isSavingPresets, setIsSavingPresets] = useState(false)
 
   const loadData = async () => {
     try {
@@ -89,10 +123,14 @@ export default function DeveloperArea() {
       if (emailConf) setSysEmail(emailConf.valor)
       if (jsonConf) setSysJson(jsonConf.valor)
 
-      const layoutConf = confData.find((c) => c.chave === 'report_layout_config')
-      if (layoutConf) {
+      const activePresetConf = confData.find((c) => c.chave === 'active_report_preset')
+      if (activePresetConf) setActivePreset(activePresetConf.valor)
+
+      const definitionsConf = confData.find((c) => c.chave === 'report_presets_definitions')
+      if (definitionsConf) {
         try {
-          setMargins({ ...margins, ...JSON.parse(layoutConf.valor) })
+          // just to ensure format is valid json before setting
+          setPresetsJson(JSON.stringify(JSON.parse(definitionsConf.valor), null, 2))
         } catch {
           /* intentionally ignored */
         }
@@ -108,14 +146,6 @@ export default function DeveloperArea() {
   useEffect(() => {
     loadData()
   }, [])
-
-  const handleUpdateMargin = (key: keyof typeof margins, value: string) => {
-    const num = value === '' ? 0 : parseInt(value, 10)
-    if (isNaN(num)) return
-    const newMargins = { ...margins, [key]: num }
-    setMargins(newMargins)
-    handleUpdateConfigString('report_layout_config', JSON.stringify(newMargins))
-  }
 
   const handleToggleConfig = async (chave: string, checked: boolean) => {
     handleUpdateConfigString(chave, checked ? 'true' : 'false')
@@ -136,8 +166,6 @@ export default function DeveloperArea() {
       if (conf) {
         await updateConfiguracao(conf.id, valor)
       } else {
-        // Create if doesn't exist
-        const { createConfiguracao } = await import('@/services/configuracoes')
         await createConfiguracao(chave, valor)
         loadData() // Reload to get proper ID
       }
@@ -145,6 +173,45 @@ export default function DeveloperArea() {
     } catch (error) {
       toast({ title: 'Erro ao atualizar', variant: 'destructive' })
       loadData() // Revert on error
+    }
+  }
+
+  const handleSavePresets = async () => {
+    setIsSavingPresets(true)
+    try {
+      JSON.parse(presetsJson) // validate JSON
+
+      const promises = []
+      const activeConf = configs.find((c) => c.chave === 'active_report_preset')
+      if (activeConf) {
+        promises.push(updateConfiguracao(activeConf.id, activePreset))
+      } else {
+        promises.push(
+          createConfiguracao('active_report_preset', activePreset, 'Preset ativo do relatorio'),
+        )
+      }
+
+      const defConf = configs.find((c) => c.chave === 'report_presets_definitions')
+      if (defConf) {
+        promises.push(updateConfiguracao(defConf.id, presetsJson))
+      } else {
+        promises.push(
+          createConfiguracao(
+            'report_presets_definitions',
+            presetsJson,
+            'Definições JSON dos presets',
+          ),
+        )
+      }
+
+      await Promise.all(promises)
+      toast({ title: 'Presets salvos com sucesso!' })
+      loadData()
+    } catch (error) {
+      console.error(error)
+      toast({ title: 'JSON Inválido ou erro ao salvar', variant: 'destructive' })
+    } finally {
+      setIsSavingPresets(false)
     }
   }
 
@@ -181,11 +248,6 @@ export default function DeveloperArea() {
   const getConfigValue = (chave: string, defaultValue: boolean = false) => {
     const conf = configs.find((c) => c.chave === chave)
     return conf ? conf.valor === 'true' : defaultValue
-  }
-
-  const getConfigString = (chave: string, defaultValue: string = '') => {
-    const conf = configs.find((c) => c.chave === chave)
-    return conf ? conf.valor : defaultValue
   }
 
   if (loading) {
@@ -230,6 +292,55 @@ export default function DeveloperArea() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              <div className="p-4 bg-white rounded-lg border border-slate-200 shadow-sm space-y-4">
+                <div className="space-y-0.5">
+                  <Label className="text-base font-semibold">Presets de Layout</Label>
+                  <p className="text-sm text-slate-500">
+                    Defina os presets e ajuste as margens (mm), fontes e visibilidade para
+                    exportação de PDFs.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-500 font-semibold">
+                    Preset Ativo Padrão
+                  </Label>
+                  <Select value={activePreset} onValueChange={setActivePreset}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(
+                        (() => {
+                          try {
+                            return JSON.parse(presetsJson)
+                          } catch {
+                            return defaultPresets
+                          }
+                        })(),
+                      ).map((k) => (
+                        <SelectItem key={k} value={k}>
+                          {k}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-500 font-semibold">
+                    Configuração JSON (report_presets_definitions)
+                  </Label>
+                  <Textarea
+                    className="font-mono text-xs h-64"
+                    value={presetsJson}
+                    onChange={(e) => setPresetsJson(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleSavePresets} disabled={isSavingPresets}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSavingPresets ? 'Salvando...' : 'Salvar Presets'}
+                </Button>
+              </div>
+
               <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
                 <div className="space-y-0.5">
                   <Label className="text-base font-semibold">Mostrar Logo "TripFlow"</Label>
@@ -243,97 +354,6 @@ export default function DeveloperArea() {
                     Oculto
                   </Badge>
                   <Switch disabled checked={false} />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-                <div className="space-y-0.5">
-                  <Label htmlFor="grafico" className="text-base cursor-pointer">
-                    Mostrar Gráfico de Orçamento
-                  </Label>
-                  <p className="text-sm text-slate-500">
-                    Exibe o comparativo visual entre planejado e realizado.
-                  </p>
-                </div>
-                <Switch
-                  id="grafico"
-                  checked={getConfigValue('relatorio_mostrar_grafico', true)}
-                  onCheckedChange={(c) => handleToggleConfig('relatorio_mostrar_grafico', c)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-                <div className="space-y-0.5">
-                  <Label htmlFor="alerta" className="text-base cursor-pointer">
-                    Mostrar Alerta de Gastos
-                  </Label>
-                  <p className="text-sm text-slate-500">
-                    Exibe um aviso em vermelho quando o orçamento é excedido.
-                  </p>
-                </div>
-                <Switch
-                  id="alerta"
-                  checked={getConfigValue('relatorio_mostrar_alerta', true)}
-                  onCheckedChange={(c) => handleToggleConfig('relatorio_mostrar_alerta', c)}
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-                <div className="space-y-0.5">
-                  <Label htmlFor="descricao" className="text-base cursor-pointer">
-                    Mostrar Descrição da Viagem
-                  </Label>
-                  <p className="text-sm text-slate-500">
-                    Inclui o bloco de texto livre digitado pelo usuário.
-                  </p>
-                </div>
-                <Switch
-                  id="descricao"
-                  checked={getConfigValue('relatorio_mostrar_descricao', true)}
-                  onCheckedChange={(c) => handleToggleConfig('relatorio_mostrar_descricao', c)}
-                />
-              </div>
-
-              <div className="p-4 bg-white rounded-lg border border-slate-200 shadow-sm space-y-4">
-                <div className="space-y-0.5">
-                  <Label className="text-base">Margens do Relatório (mm)</Label>
-                  <p className="text-sm text-slate-500">
-                    Ajuste o espaçamento das bordas ao exportar para PDF ou imprimir.
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs text-slate-500 font-semibold">Superior</Label>
-                    <Input
-                      type="number"
-                      value={margins.top}
-                      onChange={(e) => handleUpdateMargin('top', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-slate-500 font-semibold">Inferior</Label>
-                    <Input
-                      type="number"
-                      value={margins.bottom}
-                      onChange={(e) => handleUpdateMargin('bottom', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-slate-500 font-semibold">Esquerda</Label>
-                    <Input
-                      type="number"
-                      value={margins.left}
-                      onChange={(e) => handleUpdateMargin('left', e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-slate-500 font-semibold">Direita</Label>
-                    <Input
-                      type="number"
-                      value={margins.right}
-                      onChange={(e) => handleUpdateMargin('right', e.target.value)}
-                    />
-                  </div>
                 </div>
               </div>
 
@@ -357,10 +377,14 @@ export default function DeveloperArea() {
                         <TripReport
                           tripId={previewTripId}
                           isPreview={true}
-                          previewConfigMap={configs.reduce(
-                            (acc, c) => ({ ...acc, [c.chave]: c.valor }),
-                            {} as Record<string, string>,
-                          )}
+                          previewConfigMap={{
+                            ...configs.reduce(
+                              (acc, c) => ({ ...acc, [c.chave]: c.valor }),
+                              {} as Record<string, string>,
+                            ),
+                            active_report_preset: activePreset,
+                            report_presets_definitions: presetsJson,
+                          }}
                         />
                       </div>
                     </div>

@@ -28,6 +28,13 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from '@/components/ui/chart'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import {
   ArrowLeft,
@@ -146,15 +153,49 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
 
   const targetCurrency = user?.moeda_padrao || trip?.moeda || 'BRL'
 
-  let margins = { top: 20, bottom: 20, left: 15, right: 15 }
-  try {
-    if (mergedConfigMap.report_layout_config) {
-      margins = { ...margins, ...JSON.parse(mergedConfigMap.report_layout_config) }
-    }
-  } catch {
-    /* intentionally ignored */
+  const defaultPresets = {
+    compact: {
+      name: 'Compacto',
+      margins: { top: 5, bottom: 5, left: 5, right: 5 },
+      showChart: false,
+      showAlert: false,
+      showDescription: false,
+      fontSize: 'text-xs',
+      pageBreak: false,
+    },
+    executive: {
+      name: 'Executivo',
+      margins: { top: 20, bottom: 20, left: 20, right: 20 },
+      showChart: true,
+      showAlert: true,
+      showDescription: false,
+      fontSize: 'text-base',
+      pageBreak: true,
+    },
+    detailed: {
+      name: 'Detalhado',
+      margins: { top: 15, bottom: 15, left: 15, right: 15 },
+      showChart: true,
+      showAlert: true,
+      showDescription: true,
+      fontSize: 'text-sm',
+      pageBreak: false,
+    },
   }
 
+  let presets = defaultPresets
+  try {
+    if (mergedConfigMap.report_presets_definitions) {
+      presets = JSON.parse(mergedConfigMap.report_presets_definitions)
+    }
+  } catch {
+    /* ignore */
+  }
+
+  const activePresetKey = mergedConfigMap.active_report_preset || 'detailed'
+  const activePreset = (presets as any)[activePresetKey] || presets.detailed
+
+  const margins = activePreset?.margins || { top: 15, bottom: 15, left: 15, right: 15 }
   const marginValue = `${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`
 
   const budgetData = useMemo(() => {
@@ -287,6 +328,10 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
           @page {
             margin: ${marginValue} !important;
           }
+          .print\\:break-before-page {
+            page-break-before: always !important;
+            break-before: page !important;
+          }
         }
       `}</style>
       {!isPreview && (
@@ -299,6 +344,41 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
             </Button>
           </div>
           <div className="flex items-center gap-2">
+            <Select
+              value={activePresetKey}
+              onValueChange={async (val) => {
+                setConfigMap((prev) => ({ ...prev, active_report_preset: val }))
+                try {
+                  const configsData = await getConfiguracoes()
+                  const conf = configsData.find((c) => c.chave === 'active_report_preset')
+                  if (conf) {
+                    const { updateConfiguracao } = await import('@/services/configuracoes')
+                    await updateConfiguracao(conf.id, val)
+                  } else {
+                    const { createConfiguracao } = await import('@/services/configuracoes')
+                    await createConfiguracao(
+                      'active_report_preset',
+                      val,
+                      'Preset ativo do relatorio',
+                    )
+                  }
+                } catch (e) {
+                  console.error(e)
+                  toast({ title: 'Erro ao salvar preset', variant: 'destructive' })
+                }
+              }}
+            >
+              <SelectTrigger className="w-[180px] bg-white border-slate-300">
+                <SelectValue placeholder="Layout" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(presets).map(([key, p]) => (
+                  <SelectItem key={key} value={key}>
+                    Template {(p as any).name || key}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="outline" onClick={() => window.print()} className="print:hidden">
               <Printer className="mr-2 h-4 w-4" /> Imprimir
             </Button>
@@ -312,7 +392,10 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
 
       <div
         id="pdf-content"
-        className="bg-white rounded-xl shadow-sm border border-slate-200 max-w-full overflow-visible text-slate-900 print:border-none print:shadow-none print:p-0 print:bg-transparent"
+        className={cn(
+          'bg-white rounded-xl shadow-sm border border-slate-200 max-w-full overflow-visible text-slate-900 print:border-none print:shadow-none print:p-0 print:bg-transparent',
+          activePreset.fontSize || 'text-sm',
+        )}
         style={isPreview ? { padding: marginValue } : { padding: '2.5rem' }}
       >
         <table className="w-full border-collapse block print:table">
@@ -408,7 +491,7 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
                     </Card>
                   </section>
 
-                  {mergedConfigMap.relatorio_mostrar_descricao !== 'false' && trip.descricao && (
+                  {activePreset.showDescription && trip.descricao && (
                     <section className="space-y-2 break-inside-avoid">
                       <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2">
                         <Info className="h-5 w-5 text-slate-500" />
@@ -419,7 +502,12 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
                   )}
 
                   {/* Section Transportes */}
-                  <section className="space-y-4 print:mt-6">
+                  <section
+                    className={cn(
+                      'space-y-4 print:mt-6',
+                      activePreset.pageBreak && 'print:break-before-page',
+                    )}
+                  >
                     <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
                       <Plane className="h-5 w-5 text-slate-500" />
                       Transporte
@@ -469,7 +557,12 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
                   </section>
 
                   {/* Section Reservas */}
-                  <section className="space-y-4 print:mt-6">
+                  <section
+                    className={cn(
+                      'space-y-4 print:mt-6',
+                      activePreset.pageBreak && 'print:break-before-page',
+                    )}
+                  >
                     <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
                       <Bed className="h-5 w-5 text-slate-500" />
                       Acomodação & Refeições
@@ -522,7 +615,12 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
                   </section>
 
                   {/* Section Itinerary */}
-                  <section className="space-y-4 print:mt-6">
+                  <section
+                    className={cn(
+                      'space-y-4 print:mt-6',
+                      activePreset.pageBreak && 'print:break-before-page',
+                    )}
+                  >
                     <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
                       <MapPin className="h-5 w-5 text-slate-500" />
                       Itinerário
@@ -587,13 +685,18 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
                   </section>
 
                   {/* Section Budget */}
-                  <section className="space-y-4 print:mt-6">
+                  <section
+                    className={cn(
+                      'space-y-4 print:mt-6',
+                      activePreset.pageBreak && 'print:break-before-page',
+                    )}
+                  >
                     <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
                       <AlertCircle className="h-5 w-5 text-slate-500" />
                       Comparativo de Orçamento ({targetCurrency})
                     </h2>
 
-                    {mergedConfigMap.relatorio_mostrar_alerta !== 'false' && isOverBudget && (
+                    {activePreset.showAlert && isOverBudget && (
                       <div className="bg-red-50 text-red-800 p-4 rounded-lg flex items-start gap-3 border border-red-200 break-inside-avoid print:border-red-300 print:bg-red-50">
                         <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
                         <div>
@@ -609,8 +712,20 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start print:flex print:flex-col print:gap-8">
-                      <div className="border border-slate-200 rounded-lg overflow-x-auto print:overflow-visible print:border-0 print:shadow-none w-full">
+                    <div
+                      className={cn(
+                        'grid items-start print:flex print:flex-col print:gap-8 gap-8',
+                        activePreset.name === 'Executivo'
+                          ? 'grid-cols-1 place-items-center'
+                          : 'grid-cols-1 lg:grid-cols-2',
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          'border border-slate-200 rounded-lg overflow-x-auto print:overflow-visible print:border-0 print:shadow-none w-full',
+                          activePreset.name === 'Executivo' && 'max-w-4xl',
+                        )}
+                      >
                         <Table className="min-w-[500px] print:min-w-full">
                           <TableHeader>
                             <TableRow>
@@ -666,15 +781,20 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
                         </Table>
                       </div>
 
-                      <Card className="shadow-none border border-slate-200 break-inside-avoid print:border-0 print:shadow-none w-full">
+                      <Card
+                        className={cn(
+                          'shadow-none border border-slate-200 break-inside-avoid print:border-0 print:shadow-none w-full',
+                          activePreset.name === 'Executivo' && 'max-w-3xl',
+                        )}
+                      >
                         <CardContent className="pt-6">
                           {totalPlanned === 0 && totalRealized === 0 ? (
                             <div className="h-[300px] flex items-center justify-center text-slate-500">
                               Nenhuma despesa registrada
                             </div>
-                          ) : mergedConfigMap.relatorio_mostrar_grafico === 'false' ? (
+                          ) : !activePreset.showChart ? (
                             <div className="h-[300px] flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg border border-dashed border-slate-200 print:hidden">
-                              Gráfico ocultado
+                              Gráfico ocultado pelo Preset
                             </div>
                           ) : (
                             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -727,7 +847,12 @@ export default function TripReport({ tripId, previewConfigMap, isPreview }: Trip
                   </section>
 
                   {/* Section Documents */}
-                  <section className="space-y-4 print:mt-6">
+                  <section
+                    className={cn(
+                      'space-y-4 print:mt-6',
+                      activePreset.pageBreak && 'print:break-before-page',
+                    )}
+                  >
                     <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2 break-after-avoid">
                       <FileText className="h-5 w-5 text-slate-500" />
                       Documentos
