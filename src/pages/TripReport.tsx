@@ -7,6 +7,7 @@ import { getOrcamentos, getDespesas, OrcamentoPlanejado, Despesa } from '@/servi
 import { getTripDocuments, Documento } from '@/services/documentos'
 import { getTickets, Ticket } from '@/services/tickets'
 import { getReservas, Reserva } from '@/services/reservas'
+import { getConfiguracoes } from '@/services/configuracoes'
 import { calculateBudgetData } from '@/lib/budget-utils'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -79,6 +80,7 @@ export default function TripReport() {
   const [documents, setDocuments] = useState<Documento[]>([])
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [reservas, setReservas] = useState<Reserva[]>([])
+  const [configMap, setConfigMap] = useState<Record<string, string>>({})
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -89,7 +91,7 @@ export default function TripReport() {
     if (!id) return
     try {
       setLoading(true)
-      const [tripData, travelersData, itineraryData, orcs, desps, docs, ticks, resvs] =
+      const [tripData, travelersData, itineraryData, orcs, desps, docs, ticks, resvs, configsData] =
         await Promise.all([
           getTrip(id),
           getTravelers(id),
@@ -99,6 +101,7 @@ export default function TripReport() {
           getTripDocuments(id),
           getTickets(id),
           getReservas(id),
+          getConfiguracoes(),
         ])
 
       setTrip(tripData)
@@ -109,6 +112,12 @@ export default function TripReport() {
       setDocuments(docs)
       setTickets(ticks)
       setReservas(resvs)
+
+      const cMap = configsData.reduce(
+        (acc, c) => ({ ...acc, [c.chave]: c.valor }),
+        {} as Record<string, string>,
+      )
+      setConfigMap(cMap)
 
       setError(false)
     } catch (err) {
@@ -277,18 +286,7 @@ export default function TripReport() {
           <thead className="hidden print:table-header-group">
             <tr>
               <th className="pb-6 border-b border-slate-200 text-left font-normal bg-white print:pb-8 print:pt-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="bg-primary text-primary-foreground p-1.5 rounded-md print:bg-primary print:text-white"
-                      style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
-                    >
-                      <Plane className="h-6 w-6" />
-                    </div>
-                    <span className="text-2xl font-bold text-slate-900 tracking-tight">
-                      TripFlow
-                    </span>
-                  </div>
+                <div className="flex items-center justify-end">
                   <div className="text-right">
                     <h2 className="text-xl font-bold text-slate-800">{trip.title}</h2>
                     <p className="text-sm text-slate-500">{trip.destination}</p>
@@ -303,14 +301,6 @@ export default function TripReport() {
                 <div className="space-y-10">
                   {/* Screen Header (Hidden on Print) */}
                   <div className="border-b border-slate-200 pb-6 print:hidden">
-                    <div className="flex items-center gap-2 mb-6">
-                      <div className="bg-primary text-primary-foreground p-1.5 rounded-md">
-                        <Plane className="h-5 w-5" />
-                      </div>
-                      <span className="text-xl font-bold text-slate-900 tracking-tight">
-                        TripFlow
-                      </span>
-                    </div>
                     <h1 className="text-2xl font-bold text-slate-800">{trip.title}</h1>
                     <p className="text-sm text-slate-500">{trip.destination}</p>
                   </div>
@@ -385,7 +375,7 @@ export default function TripReport() {
                     </Card>
                   </section>
 
-                  {trip.descricao && (
+                  {configMap.relatorio_mostrar_descricao !== 'false' && trip.descricao && (
                     <section className="space-y-2 break-inside-avoid">
                       <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2">
                         <Info className="h-5 w-5 text-slate-500" />
@@ -569,7 +559,8 @@ export default function TripReport() {
                       <AlertCircle className="h-5 w-5 text-slate-500" />
                       Comparativo de Orçamento ({targetCurrency})
                     </h2>
-                    {isOverBudget && (
+
+                    {configMap.relatorio_mostrar_alerta !== 'false' && isOverBudget && (
                       <div className="bg-red-50 text-red-800 p-4 rounded-lg flex items-start gap-3 border border-red-200 break-inside-avoid">
                         <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
                         <div>
@@ -647,6 +638,10 @@ export default function TripReport() {
                           {totalPlanned === 0 && totalRealized === 0 ? (
                             <div className="h-[300px] flex items-center justify-center text-slate-500">
                               Nenhuma despesa registrada
+                            </div>
+                          ) : configMap.relatorio_mostrar_grafico === 'false' ? (
+                            <div className="h-[300px] flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
+                              Gráfico ocultado pelas configurações
                             </div>
                           ) : (
                             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -758,7 +753,9 @@ export default function TripReport() {
                       </span>{' '}
                       em {format(new Date(), 'dd/MM/yyyy HH:mm')}
                     </p>
-                    <p className="font-medium">TripFlow &copy; {new Date().getFullYear()}</p>
+                    <p className="font-medium">
+                      {configMap.app_nome || 'TripFlow'} &copy; {new Date().getFullYear()}
+                    </p>
                   </div>
                 </div>
               </td>

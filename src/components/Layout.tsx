@@ -9,6 +9,7 @@ import {
   RefreshCw,
   CheckCircle2,
   ShieldAlert,
+  Settings,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { useRealtime } from '@/hooks/use-realtime'
@@ -265,6 +266,12 @@ export default function Layout() {
                   <Link to="/settings/privacy" className="flex items-center cursor-pointer w-full">
                     <ShieldAlert className="mr-2 h-4 w-4" />
                     <span>Privacidade</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/developer-area" className="flex items-center cursor-pointer w-full">
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Área do Dev</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={signOut} className="text-destructive">
