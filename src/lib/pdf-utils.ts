@@ -32,7 +32,7 @@ async function getBase64ImageFromUrl(
   }
 }
 
-export async function generatePDF(elementId: string, filenamePrefix: string) {
+export async function generatePDF(elementId: string, filenamePrefix: string, marginStr?: string) {
   if (!window.html2canvas) {
     await new Promise((resolve, reject) => {
       const script = document.createElement('script')
@@ -60,8 +60,9 @@ export async function generatePDF(elementId: string, filenamePrefix: string) {
 
   const style = document.createElement('style')
   style.id = 'pdf-export-style'
+  const paddingValue = marginStr || '20px'
   style.innerHTML = `
-    .pdf-export-mode { width: 1024px !important; max-width: 1024px !important; margin: 0 auto !important; padding: 20px !important; background: white !important; }
+    .pdf-export-mode { width: 1024px !important; max-width: 1024px !important; margin: 0 auto !important; padding: ${paddingValue} !important; background: white !important; }
     .pdf-export-mode .print-hidden { display: none !important; }
     .pdf-export-mode .print-only { display: block !important; }
     .pdf-export-mode .overflow-x-auto, 

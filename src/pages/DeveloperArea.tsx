@@ -23,6 +23,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
   Settings,
   LayoutTemplate,
   Database,
@@ -32,6 +39,7 @@ import {
   WifiOff,
   FileText,
   DollarSign,
+  Eye,
 } from 'lucide-react'
 import {
   getConfiguracoes,
@@ -39,7 +47,9 @@ import {
   getDatabaseStats,
   Configuracao,
 } from '@/services/configuracoes'
+import { getTrips } from '@/services/trips'
 import { useToast } from '@/hooks/use-toast'
+import TripReport from '@/pages/TripReport'
 
 export default function DeveloperArea() {
   const { toast } = useToast()
@@ -53,12 +63,22 @@ export default function DeveloperArea() {
   const [sysJson, setSysJson] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
+  const [previewTripId, setPreviewTripId] = useState<string | undefined>()
+  const [margins, setMargins] = useState({ top: 20, bottom: 20, left: 15, right: 15 })
+
   const loadData = async () => {
     try {
       setLoading(true)
-      const [confData, statsData] = await Promise.all([getConfiguracoes(), getDatabaseStats()])
+      const [confData, statsData, tripsData] = await Promise.all([
+        getConfiguracoes(),
+        getDatabaseStats(),
+        getTrips(),
+      ])
       setConfigs(confData)
       setStats(statsData)
+      if (tripsData && tripsData.length > 0) {
+        setPreviewTripId(tripsData[0].id)
+      }
 
       // Initialize form states
       const nameConf = confData.find((c) => c.chave === 'app_nome')
@@ -68,6 +88,15 @@ export default function DeveloperArea() {
       if (nameConf) setSysName(nameConf.valor)
       if (emailConf) setSysEmail(emailConf.valor)
       if (jsonConf) setSysJson(jsonConf.valor)
+
+      const layoutConf = confData.find((c) => c.chave === 'report_layout_config')
+      if (layoutConf) {
+        try {
+          setMargins({ ...margins, ...JSON.parse(layoutConf.valor) })
+        } catch {
+          /* intentionally ignored */
+        }
+      }
     } catch (error) {
       console.error(error)
       toast({ title: 'Erro ao carregar dados', variant: 'destructive' })
@@ -79,6 +108,14 @@ export default function DeveloperArea() {
   useEffect(() => {
     loadData()
   }, [])
+
+  const handleUpdateMargin = (key: keyof typeof margins, value: string) => {
+    const num = value === '' ? 0 : parseInt(value, 10)
+    if (isNaN(num)) return
+    const newMargins = { ...margins, [key]: num }
+    setMargins(newMargins)
+    handleUpdateConfigString('report_layout_config', JSON.stringify(newMargins))
+  }
 
   const handleToggleConfig = async (chave: string, checked: boolean) => {
     handleUpdateConfigString(chave, checked ? 'true' : 'false')
@@ -257,26 +294,78 @@ export default function DeveloperArea() {
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+              <div className="p-4 bg-white rounded-lg border border-slate-200 shadow-sm space-y-4">
                 <div className="space-y-0.5">
-                  <Label className="text-base">Margens do Relatório (Impressão)</Label>
+                  <Label className="text-base">Margens do Relatório (mm)</Label>
                   <p className="text-sm text-slate-500">
                     Ajuste o espaçamento das bordas ao exportar para PDF ou imprimir.
                   </p>
                 </div>
-                <Select
-                  value={getConfigString('relatorio_margem', 'medium')}
-                  onValueChange={(v) => handleUpdateConfigString('relatorio_margem', v)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="small">Pequena (10mm)</SelectItem>
-                    <SelectItem value="medium">Média (20mm)</SelectItem>
-                    <SelectItem value="large">Grande (30mm)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-500 font-semibold">Superior</Label>
+                    <Input
+                      type="number"
+                      value={margins.top}
+                      onChange={(e) => handleUpdateMargin('top', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-500 font-semibold">Inferior</Label>
+                    <Input
+                      type="number"
+                      value={margins.bottom}
+                      onChange={(e) => handleUpdateMargin('bottom', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-500 font-semibold">Esquerda</Label>
+                    <Input
+                      type="number"
+                      value={margins.left}
+                      onChange={(e) => handleUpdateMargin('left', e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-500 font-semibold">Direita</Label>
+                    <Input
+                      type="number"
+                      value={margins.right}
+                      onChange={(e) => handleUpdateMargin('right', e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 flex justify-end">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <Eye className="h-4 w-4" />
+                      Visualizar Preview do Relatório
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-[90vw] w-[1000px] h-[90vh] overflow-hidden flex flex-col p-0">
+                    <DialogHeader className="p-6 pb-2 border-b shrink-0 bg-white">
+                      <DialogTitle>Preview do Relatório</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto bg-slate-50 p-6">
+                      <div
+                        className="max-w-[1024px] mx-auto bg-white shadow-lg border relative rounded-xl"
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <TripReport
+                          tripId={previewTripId}
+                          isPreview={true}
+                          previewConfigMap={configs.reduce(
+                            (acc, c) => ({ ...acc, [c.chave]: c.valor }),
+                            {} as Record<string, string>,
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardContent>
           </Card>

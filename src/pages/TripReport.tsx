@@ -66,8 +66,16 @@ const chartConfig = {
   },
 }
 
-export default function TripReport() {
-  const { id } = useParams<{ id: string }>()
+interface TripReportProps {
+  tripId?: string
+  previewConfigMap?: Record<string, string>
+  isPreview?: boolean
+}
+
+export default function TripReport({ tripId, previewConfigMap, isPreview }: TripReportProps) {
+  const params = useParams<{ id: string }>()
+  const id = tripId || params.id
+
   const { user } = useAuth()
   const { toast } = useToast()
   const location = useLocation()
@@ -132,11 +140,22 @@ export default function TripReport() {
     loadData()
   }, [id])
 
+  const mergedConfigMap = useMemo(() => {
+    return previewConfigMap ? { ...configMap, ...previewConfigMap } : configMap
+  }, [configMap, previewConfigMap])
+
   const targetCurrency = user?.moeda_padrao || trip?.moeda || 'BRL'
 
-  const marginConfig = configMap.relatorio_margem || 'medium'
-  const marginValue =
-    marginConfig === 'small' ? '10mm 10mm' : marginConfig === 'large' ? '30mm 20mm' : '20mm 15mm'
+  let margins = { top: 20, bottom: 20, left: 15, right: 15 }
+  try {
+    if (mergedConfigMap.report_layout_config) {
+      margins = { ...margins, ...JSON.parse(mergedConfigMap.report_layout_config) }
+    }
+  } catch {
+    /* intentionally ignored */
+  }
+
+  const marginValue = `${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`
 
   const budgetData = useMemo(() => {
     return calculateBudgetData(orcamentos, despesas, [], [], itinerary, targetCurrency)
@@ -188,7 +207,7 @@ export default function TripReport() {
     try {
       setIsGenerating(true)
       const { generatePDF } = await import('@/lib/pdf-utils')
-      await generatePDF('pdf-content', `Relatorio_Viagem_${trip?.title || 'Resumo'}`)
+      await generatePDF('pdf-content', `Relatorio_Viagem_${trip?.title || 'Resumo'}`, marginValue)
       toast({
         title: 'Sucesso',
         description: 'Relatório gerado com sucesso!',
@@ -270,28 +289,31 @@ export default function TripReport() {
           }
         }
       `}</style>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 print:hidden">
-        <div>
-          <Button variant="ghost" className="mb-2 -ml-4 text-slate-500" asChild>
-            <Link to={`/trips/${id}`}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Viagem
-            </Link>
-          </Button>
+      {!isPreview && (
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 print:hidden">
+          <div>
+            <Button variant="ghost" className="mb-2 -ml-4 text-slate-500" asChild>
+              <Link to={`/trips/${id}`}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Viagem
+              </Link>
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => window.print()} className="print:hidden">
+              <Printer className="mr-2 h-4 w-4" /> Imprimir
+            </Button>
+            <Button onClick={handleGeneratePDF} disabled={isGenerating} className="print:hidden">
+              <FileText className="mr-2 h-4 w-4" />{' '}
+              {isGenerating ? 'Gerando...' : 'Exportar Relatório'}
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => window.print()} className="print:hidden">
-            <Printer className="mr-2 h-4 w-4" /> Imprimir
-          </Button>
-          <Button onClick={handleGeneratePDF} disabled={isGenerating} className="print:hidden">
-            <FileText className="mr-2 h-4 w-4" />{' '}
-            {isGenerating ? 'Gerando...' : 'Exportar Relatório'}
-          </Button>
-        </div>
-      </div>
+      )}
 
       <div
         id="pdf-content"
-        className="bg-white p-6 sm:p-10 rounded-xl shadow-sm border border-slate-200 max-w-full overflow-visible text-slate-900 print:border-none print:shadow-none print:p-0 print:bg-transparent"
+        className="bg-white rounded-xl shadow-sm border border-slate-200 max-w-full overflow-visible text-slate-900 print:border-none print:shadow-none print:p-0 print:bg-transparent"
+        style={isPreview ? { padding: marginValue } : { padding: '2.5rem' }}
       >
         <table className="w-full border-collapse block print:table">
           <thead className="hidden print:table-header-group">
@@ -386,7 +408,7 @@ export default function TripReport() {
                     </Card>
                   </section>
 
-                  {configMap.relatorio_mostrar_descricao !== 'false' && trip.descricao && (
+                  {mergedConfigMap.relatorio_mostrar_descricao !== 'false' && trip.descricao && (
                     <section className="space-y-2 break-inside-avoid">
                       <h2 className="text-xl font-semibold border-b border-slate-200 pb-2 flex items-center gap-2">
                         <Info className="h-5 w-5 text-slate-500" />
@@ -571,7 +593,7 @@ export default function TripReport() {
                       Comparativo de Orçamento ({targetCurrency})
                     </h2>
 
-                    {configMap.relatorio_mostrar_alerta !== 'false' && isOverBudget && (
+                    {mergedConfigMap.relatorio_mostrar_alerta !== 'false' && isOverBudget && (
                       <div className="bg-red-50 text-red-800 p-4 rounded-lg flex items-start gap-3 border border-red-200 break-inside-avoid print:border-red-300 print:bg-red-50">
                         <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
                         <div>
@@ -650,7 +672,7 @@ export default function TripReport() {
                             <div className="h-[300px] flex items-center justify-center text-slate-500">
                               Nenhuma despesa registrada
                             </div>
-                          ) : configMap.relatorio_mostrar_grafico === 'false' ? (
+                          ) : mergedConfigMap.relatorio_mostrar_grafico === 'false' ? (
                             <div className="h-[300px] flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg border border-dashed border-slate-200 print:hidden">
                               Gráfico ocultado
                             </div>
@@ -765,7 +787,7 @@ export default function TripReport() {
                       em {format(new Date(), 'dd/MM/yyyy HH:mm')}
                     </p>
                     <p className="font-medium">
-                      {configMap.app_nome || 'TripFlow'} &copy; {new Date().getFullYear()}
+                      {mergedConfigMap.app_nome || 'TripFlow'} &copy; {new Date().getFullYear()}
                     </p>
                   </div>
                 </div>
