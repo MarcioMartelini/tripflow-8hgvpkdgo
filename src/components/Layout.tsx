@@ -39,8 +39,20 @@ export default function Layout() {
   const [docsCount, setDocsCount] = useState(0)
   const [isSelectTripOpen, setIsSelectTripOpen] = useState(false)
   const { syncState, pendingCount } = useSync()
+  const [configDocs, setConfigDocs] = useState(true)
+  const [configDesp, setConfigDesp] = useState(true)
 
   useEffect(() => {
+    pb.collection('configuracoes_sistema')
+      .getFullList()
+      .then((configs) => {
+        const docs = configs.find((c) => c.chave === 'modulo_documentos')
+        const desp = configs.find((c) => c.chave === 'modulo_despesas')
+        if (docs && docs.valor === 'false') setConfigDocs(false)
+        if (desp && desp.valor === 'false') setConfigDesp(false)
+      })
+      .catch(() => {})
+
     if (user) {
       pb.collection('alertas')
         .getList(1, 1, { filter: `usuario_id = "${user.id}" && lido = false` })
@@ -113,12 +125,18 @@ export default function Layout() {
   const navItems = [
     { name: 'Dashboard', path: '/' },
     { name: 'Minhas Viagens', path: '/trips' },
-    { name: 'Documentos', path: activeTripId ? `/documents/${activeTripId}` : '/documents' },
-    {
-      name: 'Orçamento',
-      path: activeTripId ? `/orcamento/${activeTripId}` : '#',
-      isModal: !activeTripId,
-    },
+    ...(configDocs
+      ? [{ name: 'Documentos', path: activeTripId ? `/documents/${activeTripId}` : '/documents' }]
+      : []),
+    ...(configDesp
+      ? [
+          {
+            name: 'Orçamento',
+            path: activeTripId ? `/orcamento/${activeTripId}` : '#',
+            isModal: !activeTripId,
+          },
+        ]
+      : []),
     { name: 'Alertas', path: '/alerts' },
   ]
 

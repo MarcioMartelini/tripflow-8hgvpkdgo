@@ -19,6 +19,14 @@ export const updateConfiguracao = async (id: string, valor: string): Promise<Con
   return pb.collection('configuracoes_sistema').update(id, { valor })
 }
 
+export const createConfiguracao = async (
+  chave: string,
+  valor: string,
+  descricao: string = '',
+): Promise<Configuracao> => {
+  return pb.collection('configuracoes_sistema').create({ chave, valor, descricao })
+}
+
 export const getDatabaseStats = async () => {
   const [trips, itinerario, users] = await Promise.all([
     pb.collection('trips').getList(1, 1),

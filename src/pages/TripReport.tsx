@@ -134,6 +134,10 @@ export default function TripReport() {
 
   const targetCurrency = user?.moeda_padrao || trip?.moeda || 'BRL'
 
+  const marginConfig = configMap.relatorio_margem || 'medium'
+  const marginValue =
+    marginConfig === 'small' ? '10mm 10mm' : marginConfig === 'large' ? '30mm 20mm' : '20mm 15mm'
+
   const budgetData = useMemo(() => {
     return calculateBudgetData(orcamentos, despesas, [], [], itinerary, targetCurrency)
   }, [orcamentos, despesas, itinerary, targetCurrency])
@@ -259,6 +263,13 @@ export default function TripReport() {
 
   return (
     <div className="container py-8 px-4 max-w-6xl mx-auto space-y-8 animate-fade-in pb-20 print:py-0 print:pb-0 print:px-0 print:max-w-none print:w-full">
+      <style>{`
+        @media print {
+          @page {
+            margin: ${marginValue} !important;
+          }
+        }
+      `}</style>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 print:hidden">
         <div>
           <Button variant="ghost" className="mb-2 -ml-4 text-slate-500" asChild>
@@ -280,7 +291,7 @@ export default function TripReport() {
 
       <div
         id="pdf-content"
-        className="bg-white p-6 sm:p-10 rounded-xl shadow-sm border border-slate-200 max-w-full overflow-hidden text-slate-900 print:border-none print:shadow-none print:p-0 print:overflow-visible print:bg-transparent"
+        className="bg-white p-6 sm:p-10 rounded-xl shadow-sm border border-slate-200 max-w-full overflow-visible text-slate-900 print:border-none print:shadow-none print:p-0 print:bg-transparent"
       >
         <table className="w-full border-collapse block print:table">
           <thead className="hidden print:table-header-group">
@@ -561,7 +572,7 @@ export default function TripReport() {
                     </h2>
 
                     {configMap.relatorio_mostrar_alerta !== 'false' && isOverBudget && (
-                      <div className="bg-red-50 text-red-800 p-4 rounded-lg flex items-start gap-3 border border-red-200 break-inside-avoid">
+                      <div className="bg-red-50 text-red-800 p-4 rounded-lg flex items-start gap-3 border border-red-200 break-inside-avoid print:border-red-300 print:bg-red-50">
                         <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
                         <div>
                           <h4 className="font-semibold">Atenção: Orçamento Excedido</h4>
@@ -640,8 +651,8 @@ export default function TripReport() {
                               Nenhuma despesa registrada
                             </div>
                           ) : configMap.relatorio_mostrar_grafico === 'false' ? (
-                            <div className="h-[300px] flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg">
-                              Gráfico ocultado pelas configurações
+                            <div className="h-[300px] flex items-center justify-center text-slate-400 bg-slate-50 rounded-lg border border-dashed border-slate-200 print:hidden">
+                              Gráfico ocultado
                             </div>
                           ) : (
                             <ChartContainer config={chartConfig} className="h-[300px] w-full">

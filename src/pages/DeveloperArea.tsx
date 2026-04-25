@@ -15,7 +15,24 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Settings, LayoutTemplate, Database, Save, AlertCircle } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Settings,
+  LayoutTemplate,
+  Database,
+  Save,
+  AlertCircle,
+  ShieldAlert,
+  WifiOff,
+  FileText,
+  DollarSign,
+} from 'lucide-react'
 import {
   getConfiguracoes,
   updateConfiguracao,
@@ -64,21 +81,33 @@ export default function DeveloperArea() {
   }, [])
 
   const handleToggleConfig = async (chave: string, checked: boolean) => {
-    const conf = configs.find((c) => c.chave === chave)
-    if (!conf) return
+    handleUpdateConfigString(chave, checked ? 'true' : 'false')
+  }
 
-    const newVal = checked ? 'true' : 'false'
+  const handleUpdateConfigString = async (chave: string, valor: string) => {
+    const conf = configs.find((c) => c.chave === chave)
 
     // Optimistic update
-    setConfigs((prev) => prev.map((c) => (c.chave === chave ? { ...c, valor: newVal } : c)))
+    setConfigs((prev) => {
+      if (conf) {
+        return prev.map((c) => (c.chave === chave ? { ...c, valor } : c))
+      }
+      return [...prev, { id: 'temp', chave, valor, descricao: '', created: '', updated: '' }]
+    })
 
     try {
-      await updateConfiguracao(conf.id, newVal)
+      if (conf) {
+        await updateConfiguracao(conf.id, valor)
+      } else {
+        // Create if doesn't exist
+        const { createConfiguracao } = await import('@/services/configuracoes')
+        await createConfiguracao(chave, valor)
+        loadData() // Reload to get proper ID
+      }
       toast({ title: 'Configuração atualizada' })
     } catch (error) {
-      // Revert on error
-      setConfigs((prev) => prev.map((c) => (c.chave === chave ? { ...c, valor: conf.valor } : c)))
       toast({ title: 'Erro ao atualizar', variant: 'destructive' })
+      loadData() // Revert on error
     }
   }
 
@@ -112,8 +141,14 @@ export default function DeveloperArea() {
     }
   }
 
-  const getConfigValue = (chave: string) => {
-    return configs.find((c) => c.chave === chave)?.valor === 'true'
+  const getConfigValue = (chave: string, defaultValue: boolean = false) => {
+    const conf = configs.find((c) => c.chave === chave)
+    return conf ? conf.valor === 'true' : defaultValue
+  }
+
+  const getConfigString = (chave: string, defaultValue: string = '') => {
+    const conf = configs.find((c) => c.chave === chave)
+    return conf ? conf.valor : defaultValue
   }
 
   if (loading) {
@@ -185,7 +220,7 @@ export default function DeveloperArea() {
                 </div>
                 <Switch
                   id="grafico"
-                  checked={getConfigValue('relatorio_mostrar_grafico')}
+                  checked={getConfigValue('relatorio_mostrar_grafico', true)}
                   onCheckedChange={(c) => handleToggleConfig('relatorio_mostrar_grafico', c)}
                 />
               </div>
@@ -201,7 +236,7 @@ export default function DeveloperArea() {
                 </div>
                 <Switch
                   id="alerta"
-                  checked={getConfigValue('relatorio_mostrar_alerta')}
+                  checked={getConfigValue('relatorio_mostrar_alerta', true)}
                   onCheckedChange={(c) => handleToggleConfig('relatorio_mostrar_alerta', c)}
                 />
               </div>
@@ -217,9 +252,31 @@ export default function DeveloperArea() {
                 </div>
                 <Switch
                   id="descricao"
-                  checked={getConfigValue('relatorio_mostrar_descricao')}
+                  checked={getConfigValue('relatorio_mostrar_descricao', true)}
                   onCheckedChange={(c) => handleToggleConfig('relatorio_mostrar_descricao', c)}
                 />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Margens do Relatório (Impressão)</Label>
+                  <p className="text-sm text-slate-500">
+                    Ajuste o espaçamento das bordas ao exportar para PDF ou imprimir.
+                  </p>
+                </div>
+                <Select
+                  value={getConfigString('relatorio_margem', 'medium')}
+                  onValueChange={(v) => handleUpdateConfigString('relatorio_margem', v)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="small">Pequena (10mm)</SelectItem>
+                    <SelectItem value="medium">Média (20mm)</SelectItem>
+                    <SelectItem value="large">Grande (30mm)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
@@ -281,8 +338,49 @@ export default function DeveloperArea() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
                     <div className="space-y-0.5">
-                      <Label htmlFor="offline" className="text-base cursor-pointer">
-                        Sincronização Offline
+                      <Label
+                        htmlFor="modulo_despesas"
+                        className="text-base cursor-pointer flex items-center gap-2"
+                      >
+                        <DollarSign className="h-4 w-4 text-slate-500" /> Módulo de Despesas
+                      </Label>
+                      <p className="text-sm text-slate-500">
+                        Habilita o controle financeiro e orçamento.
+                      </p>
+                    </div>
+                    <Switch
+                      id="modulo_despesas"
+                      checked={getConfigValue('modulo_despesas', true)}
+                      onCheckedChange={(c) => handleToggleConfig('modulo_despesas', c)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="modulo_documentos"
+                        className="text-base cursor-pointer flex items-center gap-2"
+                      >
+                        <FileText className="h-4 w-4 text-slate-500" /> Módulo de Documentos
+                      </Label>
+                      <p className="text-sm text-slate-500">
+                        Permite anexar arquivos e gerenciar validades.
+                      </p>
+                    </div>
+                    <Switch
+                      id="modulo_documentos"
+                      checked={getConfigValue('modulo_documentos', true)}
+                      onCheckedChange={(c) => handleToggleConfig('modulo_documentos', c)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-slate-200">
+                    <div className="space-y-0.5">
+                      <Label
+                        htmlFor="offline"
+                        className="text-base cursor-pointer flex items-center gap-2"
+                      >
+                        <WifiOff className="h-4 w-4 text-slate-500" /> Sincronização Offline
                       </Label>
                       <p className="text-sm text-slate-500">
                         Habilita filas locais e WebWorkers (Requer reload).
@@ -290,7 +388,7 @@ export default function DeveloperArea() {
                     </div>
                     <Switch
                       id="offline"
-                      checked={getConfigValue('feature_offline_sync')}
+                      checked={getConfigValue('feature_offline_sync', true)}
                       onCheckedChange={(c) => handleToggleConfig('feature_offline_sync', c)}
                     />
                   </div>
@@ -301,7 +399,7 @@ export default function DeveloperArea() {
                         htmlFor="maintenance"
                         className="text-base cursor-pointer flex items-center gap-2"
                       >
-                        <AlertCircle className="h-4 w-4 text-orange-600" /> Modo de Manutenção
+                        <ShieldAlert className="h-4 w-4 text-orange-600" /> Modo de Manutenção
                       </Label>
                       <p className="text-sm text-orange-700">
                         Bloqueia o acesso a novos logins e exibe tela de manutenção.
@@ -309,7 +407,7 @@ export default function DeveloperArea() {
                     </div>
                     <Switch
                       id="maintenance"
-                      checked={getConfigValue('modo_manutencao')}
+                      checked={getConfigValue('modo_manutencao', false)}
                       onCheckedChange={(c) => handleToggleConfig('modo_manutencao', c)}
                     />
                   </div>
