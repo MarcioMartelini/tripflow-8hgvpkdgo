@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getTrips, type Trip } from '@/services/trips'
 import { getUpcomingItinerario, type ItinerarioEvent } from '@/services/itinerario'
-import { getDocumentosCount } from '@/services/documentos'
 import {
   getAllDespesas,
   getAllOrcamentos,
@@ -45,7 +44,6 @@ import { NewTripDialog } from '@/components/NewTripDialog'
 export default function Index() {
   const [trips, setTrips] = useState<Trip[]>([])
   const [events, setEvents] = useState<ItinerarioEvent[]>([])
-  const [docCount, setDocCount] = useState(0)
   const [totalDespesas, setTotalDespesas] = useState(0)
   const [totalOrcamentoDetalhado, setTotalOrcamentoDetalhado] = useState(0)
   const [recentAlerts, setRecentAlerts] = useState<Alerta[]>([])
@@ -59,18 +57,15 @@ export default function Index() {
       setError(null)
 
       const userId = user?.id || ''
-      const [tripsData, eventsData, docs, despesasData, orcamentosData, alertasData] =
-        await Promise.all([
-          getTrips(),
-          getUpcomingItinerario(),
-          getDocumentosCount(),
-          getAllDespesas(),
-          getAllOrcamentos(),
-          userId ? getAlertas(userId) : Promise.resolve([]),
-        ])
+      const [tripsData, eventsData, despesasData, orcamentosData, alertasData] = await Promise.all([
+        getTrips(),
+        getUpcomingItinerario(),
+        getAllDespesas(),
+        getAllOrcamentos(),
+        userId ? getAlertas(userId) : Promise.resolve([]),
+      ])
       setTrips(tripsData)
       setEvents(eventsData.items)
-      setDocCount(docs)
 
       const sumDespesas = despesasData.reduce((acc, d) => acc + (d.valor || 0), 0)
       setTotalDespesas(sumDespesas)
@@ -120,7 +115,7 @@ export default function Index() {
   const finalTotalBudget =
     totalOrcamentoDetalhado > 0 ? totalOrcamentoDetalhado : totalBudgetFromTrips
 
-  const totalDocuments = docCount
+  const ongoingTripsCount = trips.filter((t) => t.status === 'ongoing').length
 
   const getEventIcon = (type: string) => {
     switch (type) {
@@ -156,15 +151,16 @@ export default function Index() {
             Organize suas viagens com segurança e controle total. Planeje roteiros, gerencie
             orçamentos e mantenha seus eventos sempre sob controle.
           </p>
-          {trips.length === 0 ? (
+          <div className="flex flex-wrap items-center gap-4">
             <NewTripDialog />
-          ) : (
-            <Button size="lg" className="gap-2" asChild>
-              <Link to="/trips">
-                Ver todas as viagens <ChevronRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          )}
+            {trips.length > 0 && (
+              <Button size="lg" variant="outline" className="gap-2" asChild>
+                <Link to="/trips">
+                  Ver todas as viagens <ChevronRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
         <Plane className="absolute -right-10 -bottom-10 h-64 w-64 text-primary/5 -rotate-12 pointer-events-none" />
       </section>
@@ -190,12 +186,12 @@ export default function Index() {
             <Card className="border-slate-200/60 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-sm font-medium text-slate-500">
-                  Documentos Anexados
+                  Viagens em Andamento
                 </CardTitle>
-                <FileText className="h-4 w-4 text-slate-400" />
+                <Activity className="h-4 w-4 text-slate-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-slate-900">{totalDocuments}</div>
+                <div className="text-3xl font-bold text-slate-900">{ongoingTripsCount}</div>
               </CardContent>
             </Card>
 
